@@ -29,8 +29,8 @@ Transaction
 
 TransactionEntry
 ├── id_transaction_entry
-├── transaction_id
-├── account_id
+├── id_transaction
+├── id_account
 ├── amount
 └── type
 
@@ -96,8 +96,8 @@ Representa cada movimiento individual (débito o crédito) asociado a una transa
 | Campo | Tipo de Dato | Restricción | Descripción |
 | :--- | :--- | :--- | :--- |
 | `id_transaction_entry` | `UUID` / `BIGINT` | `PK` | Identificador único de la línea de detalle. |
-| `transaction_id` | `UUID` / `BIGINT` | `FK` | Transacción financiera a la que pertenece la entrada. |
-| `account_id` | `UUID` / `BIGINT` | `FK` | Cuenta contable afectada por el movimiento. |
+| `id_transaction` | `UUID` / `BIGINT` | `FK` | Transacción financiera a la que pertenece la entrada. |
+| `id_account` | `UUID` / `BIGINT` | `FK` | Cuenta contable afectada por el movimiento. |
 | `amount` | `DECIMAL(15,2)` | `CHECK (> 0)` | Monto monetario positivo de la operación. |
 | `type` | `ENUM` / `FK` | `NOT NULL` | Tipo de movimiento según la tabla/enum `EntryType`. |
 
@@ -121,7 +121,7 @@ Muestra visual de la relación entre `transaction`, `transaction_entry` y la ecu
 
 Transacción #1001: Venta de Servicio [POSTED]
 ------------------------------------------------------------------
-Cuenta (`account_id`)               | Debe (`DEBIT`) | Haber (`CREDIT`)
+Cuenta (`id_account`)               | Debe (`DEBIT`) | Haber (`CREDIT`)
 ------------------------------------------------------------------
 1010 - Caja General (`ASSET`)       | $150.00        | -
 4010 - Ingresos x Venta (`REVENUE`) | -              | $150.00
