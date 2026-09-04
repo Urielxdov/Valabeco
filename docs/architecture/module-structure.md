@@ -22,6 +22,7 @@ src/
         use-cases/
       infrastructure/
         composition.ts
+        prisma/
         persistence/
         external/
       presentation/
@@ -75,6 +76,7 @@ Regla: depende de `domain`, pero no de adaptadores concretos.
 Implementa detalles externos:
 
 - repositorios concretos;
+- Prisma Client y mapeos entre modelos Prisma y entidades/DTOs;
 - clientes de APIs externas;
 - adaptadores de almacenamiento;
 - proveedores de email, pagos, archivos o IA;
@@ -82,6 +84,14 @@ Implementa detalles externos:
 
 Regla: los archivos que toquen secretos, DB, SDKs privados o filesystem deben
 marcarse con `import 'server-only'`.
+
+La base de datos principal sera PostgreSQL y el ORM sera Prisma. Los modelos
+Prisma representan persistencia, no el dominio; por eso deben mapearse hacia
+entidades, value objects o DTOs antes de salir de `infrastructure`.
+
+El modelo fisico de PostgreSQL debe seguir el estandar documentado en
+[`database-modeling.md`](./database-modeling.md): tablas en minusculas con
+palabras separadas por `_` y llaves primarias `id_{nombre_de_la_tabla}`.
 
 ### `presentation`
 
@@ -153,4 +163,3 @@ ambos lados.
 Regla: no subir conceptos de negocio a `shared` solo porque dos dominios los
 usan una vez. Primero duplicamos un poco; extraemos cuando haya una abstraccion
 estable.
-

@@ -15,6 +15,13 @@ Components, Server Actions y Route Handlers. Eso es util, pero tambien facilita
 que la logica de negocio termine acoplada a componentes, requests HTTP o clientes
 de base de datos. Para evitarlo, necesitamos limites claros desde el inicio.
 
+Para persistencia, usaremos PostgreSQL como gestor de base de datos y Prisma como
+ORM/cliente de acceso a datos.
+
+El modelado fisico de base de datos seguira un estandar de nombres: tablas en
+minusculas con palabras separadas por `_`, e identificadores primarios con el
+formato `id_{nombre_de_la_tabla}`.
+
 ## Decision
 
 Adoptamos un monolito modular por dominio con patron hexagonal dentro de cada
@@ -53,6 +60,11 @@ infrastructure
   autorizacion, reloj, archivos, correo, pagos, IA u otros servicios externos.
 - `infrastructure` implementa puertos. Aqui viven ORM, SDKs externos,
   `process.env`, clientes HTTP y detalles de almacenamiento.
+- Prisma vive en `infrastructure` y no debe filtrarse hacia `domain` ni
+  `application`; los casos de uso dependen de puertos, no de `PrismaClient`.
+- PostgreSQL es el almacenamiento transaccional principal de la aplicacion.
+- Las tablas PostgreSQL usan `snake_case` en minusculas y sus llaves primarias
+  usan `id_{nombre_de_la_tabla}`.
 - `presentation` transforma datos para UI/API y contiene componentes de dominio,
   view models y adaptadores cercanos al usuario.
 - `src/app` llama a `presentation` o a factories de composicion, pero no contiene
@@ -75,11 +87,9 @@ Costos:
 
 ## No decisiones
 
-- No elegimos aun ORM, base de datos, proveedor de autenticacion ni libreria de
-  validacion.
+- No elegimos aun proveedor de autenticacion ni libreria de validacion.
 - No creamos un contenedor global de inyeccion de dependencias. Empezaremos con
   factories simples por dominio y solo agregaremos un contenedor si el costo de
   composicion lo justifica.
 - No separamos backend y frontend en repos o deployables distintos. La separacion
   inicial es logica, dentro del mismo proyecto.
-

@@ -12,6 +12,7 @@ HTTP. La logica de negocio no vive en `app/`; vive en dominios aislados.
 - [ADR 0001: arquitectura modular hexagonal](./adr-0001-domain-hexagonal-fullstack.md)
 - [Estructura de modulos](./module-structure.md)
 - [Flujos de runtime](./runtime-flows.md)
+- [Modelado de base de datos](./database-modeling.md)
 
 ## Principios
 
@@ -33,4 +34,3 @@ HTTP. La logica de negocio no vive en `app/`; vive en dominios aislados.
 El repositorio aun esta en la plantilla inicial de Next.js. Estos documentos
 definen la direccion para el primer crecimiento del codigo; no obligan a crear
 todos los directorios hasta que exista el primer dominio real.
-

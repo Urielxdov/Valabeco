@@ -9,7 +9,8 @@ page.tsx / Server Component
   -> composition del dominio
   -> caso de uso o query
   -> puerto
-  -> adaptador de infraestructura
+  -> adaptador de infraestructura con Prisma
+  -> PostgreSQL
   -> DTO seguro
   -> componente UI
 ```
@@ -36,7 +37,8 @@ form / Client Component
   -> autenticar y autorizar
   -> caso de uso
   -> puertos
-  -> adaptadores
+  -> adaptadores Prisma
+  -> PostgreSQL
   -> revalidatePath/revalidateTag o redirect
 ```
 
@@ -87,6 +89,7 @@ Responsabilidades:
 - construir adaptadores concretos;
 - inyectarlos en casos de uso;
 - leer configuracion privada;
+- construir o reutilizar el cliente Prisma;
 - mantener secretos fuera del cliente.
 
 Empezamos con factories explicitas:
@@ -103,6 +106,7 @@ la primera opcion.
 
 - La capa de acceso a datos y adaptadores privados usan `import 'server-only'`.
 - Solo `infrastructure` o `shared/config` leen `process.env`.
+- Solo `infrastructure` usa `PrismaClient` directamente.
 - Los DTOs hacia UI/API se disenan por caso de uso, no como espejo de tablas.
 - Los Client Components no reciben entidades completas ni objetos con campos
   privados.
@@ -126,4 +130,3 @@ la primera opcion.
 - `infrastructure`: integration tests contra servicios reales controlados o
   dobles de contrato.
 - `presentation` y `app`: tests de componentes y e2e para flujos criticos.
-
