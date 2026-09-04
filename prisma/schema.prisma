@@ -1,0 +1,67 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+
+  @@map("account_type")
+}
+
+enum TransactionStatus {
+  DRAFT
+  POSTED
+  VOIDED
+
+  @@map("transaction_status")
+}
+
+enum EntryType {
+  DEBIT
+  CREDIT
+
+  @@map("entry_type")
+}
+
+model Account {
+  idAccount   String             @id @default(dbgenerated("gen_random_uuid()")) @map("id_account") @db.Uuid
+  name        String             @db.VarChar(255)
+  description String?            @db.Text
+  type        AccountType
+  balance     Decimal            @default(0.00) @db.Decimal(15, 2)
+  entries     TransactionEntry[]
+
+  @@map("account")
+}
+
+model Transaction {
+  idTransaction String             @id @default(dbgenerated("gen_random_uuid()")) @map("id_transaction") @db.Uuid
+  date          DateTime           @db.Timestamp(6)
+  description   String             @db.VarChar(500)
+  status        TransactionStatus  @default(DRAFT)
+  entries       TransactionEntry[]
+
+  @@map("transaction")
+}
+
+model TransactionEntry {
+  idTransactionEntry String      @id @default(dbgenerated("gen_random_uuid()")) @map("id_transaction_entry") @db.Uuid
+  idTransaction      String      @map("id_transaction") @db.Uuid
+  idAccount          String      @map("id_account") @db.Uuid
+  amount             Decimal     @db.Decimal(15, 2)
+  type               EntryType
+  transaction        Transaction @relation(fields: [idTransaction], references: [idTransaction], onDelete: Restrict)
+  account            Account     @relation(fields: [idAccount], references: [idAccount], onDelete: Restrict)
+
+  @@index([idTransaction])
+  @@index([idAccount])
+  @@map("transaction_entry")
+}
