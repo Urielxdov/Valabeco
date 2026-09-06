@@ -948,8 +948,8 @@ function NewEntryScreen({
   onUpdateEntry,
 }: {
   accounts: Account[];
-  creditTotal: number;
-  debitTotal: number;
+  creditTotal: string;
+  debitTotal: string;
   form: TransactionDraft;
   isBalanced: boolean;
   onAddLine: () => void;
@@ -1051,8 +1051,8 @@ function NewEntryScreen({
               </p>
               <p className="text-sm">La suma del Debe y el Haber controla si se puede guardar.</p>
             </div>
-            <Metric label="Total debe" value={debitTotal} />
-            <Metric label="Total haber" value={creditTotal} />
+            <Metric label="Total debe" value={parseAmount(debitTotal)} />
+            <Metric label="Total haber" value={parseAmount(creditTotal)} />
             <button
               className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-teal-600 px-5 text-sm font-semibold text-white disabled:bg-slate-300"
               disabled={!isBalanced}

@@ -89,24 +89,31 @@ export const selectIsTransactionDraftBalanced = (state: RootState) =>
   isTransactionDraftBalanced(state.transactionDraft);
 
 export function getDraftTotals(draft: TransactionDraft) {
-  return draft.entries.reduce(
-    (totals, entry) => ({
-      debitTotal: totals.debitTotal + parseAmount(entry.debitAmount),
-      creditTotal: totals.creditTotal + parseAmount(entry.creditAmount),
+  const totals = draft.entries.reduce(
+    (summary, entry) => ({
+      debitCents: summary.debitCents + parseMoneyCents(entry.debitAmount),
+      creditCents: summary.creditCents + parseMoneyCents(entry.creditAmount),
     }),
-    { debitTotal: 0, creditTotal: 0 },
+    { debitCents: 0, creditCents: 0 },
   );
+
+  return {
+    debitTotal: centsToDecimalString(totals.debitCents),
+    creditTotal: centsToDecimalString(totals.creditCents),
+    debitTotalCents: totals.debitCents,
+    creditTotalCents: totals.creditCents,
+  };
 }
 
 export function toTransactionEntryInput(draft: TransactionDraft) {
   return draft.entries.flatMap(({ idAccount, debitAmount, creditAmount }) => {
     const entries: Array<{ idAccount: string; amount: string; type: "DEBIT" | "CREDIT" }> = [];
 
-    if (parseAmount(debitAmount) > 0) {
+    if (parseMoneyCents(debitAmount) > 0) {
       entries.push({ idAccount, amount: debitAmount, type: "DEBIT" });
     }
 
-    if (parseAmount(creditAmount) > 0) {
+    if (parseMoneyCents(creditAmount) > 0) {
       entries.push({ idAccount, amount: creditAmount, type: "CREDIT" });
     }
 
@@ -115,20 +122,38 @@ export function toTransactionEntryInput(draft: TransactionDraft) {
 }
 
 function isTransactionDraftBalanced(draft: TransactionDraft) {
-  const { debitTotal, creditTotal } = getDraftTotals(draft);
+  const { debitTotalCents, creditTotalCents } = getDraftTotals(draft);
   const hasAccountForEveryAmount = draft.entries.every((entry) => {
     return !hasDraftAmount(entry) || Boolean(entry.idAccount);
   });
   const hasTwoEntries = draft.entries.filter(hasDraftAmount).length >= 2;
 
-  return debitTotal > 0 && debitTotal === creditTotal && hasAccountForEveryAmount && hasTwoEntries;
+  return (
+    debitTotalCents > 0 &&
+    debitTotalCents === creditTotalCents &&
+    hasAccountForEveryAmount &&
+    hasTwoEntries
+  );
 }
 
 function hasDraftAmount(entry: DraftEntry) {
-  return parseAmount(entry.debitAmount) > 0 || parseAmount(entry.creditAmount) > 0;
+  return parseMoneyCents(entry.debitAmount) > 0 || parseMoneyCents(entry.creditAmount) > 0;
 }
 
-function parseAmount(value: string) {
-  const amount = Number(value);
-  return Number.isFinite(amount) ? amount : 0;
+function parseMoneyCents(value: string) {
+  const normalized = value.trim();
+
+  if (!/^\d+(\.\d{1,2})?$/.test(normalized)) {
+    return 0;
+  }
+
+  const [units, cents = ""] = normalized.split(".");
+  return parseInt(units, 10) * 100 + parseInt(cents.padEnd(2, "0"), 10);
+}
+
+function centsToDecimalString(cents: number) {
+  const units = Math.trunc(cents / 100);
+  const remainder = String(cents % 100).padStart(2, "0");
+
+  return `${units}.${remainder}`;
 }
