@@ -31,6 +31,31 @@ enum EntryType {
   @@map("entry_type")
 }
 
+enum BusinessDocumentStatus {
+  DRAFT
+  CONFIRMED
+  CANCELLED
+
+  @@map("business_document_status")
+}
+
+enum LoanStatus {
+  ACTIVE
+  PAID
+  DEFAULTED
+  CANCELLED
+
+  @@map("loan_status")
+}
+
+enum RefundStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+
+  @@map("refund_status")
+}
+
 model Account {
   idAccount   String             @id @default(dbgenerated("gen_random_uuid()")) @map("id_account") @db.Uuid
   name        String             @db.VarChar(255)
@@ -64,4 +89,137 @@ model TransactionEntry {
   @@index([idTransaction])
   @@index([idAccount])
   @@map("transaction_entry")
+}
+
+model Sale {
+  idSale     String                 @id @default(dbgenerated("gen_random_uuid()")) @map("id_sale") @db.Uuid
+  idCustomer String                 @map("id_customer") @db.Uuid
+  date       DateTime               @db.Timestamp(6)
+  subtotal   Decimal                @db.Decimal(15, 2)
+  tax        Decimal                @db.Decimal(15, 2)
+  total      Decimal                @db.Decimal(15, 2)
+  status     BusinessDocumentStatus @default(DRAFT)
+  items      SaleItem[]
+  refunds    Refund[]
+
+  @@index([idCustomer])
+  @@index([date])
+  @@map("sale")
+}
+
+model SaleItem {
+  idSaleItem String  @id @default(dbgenerated("gen_random_uuid()")) @map("id_sale_item") @db.Uuid
+  idSale     String  @map("id_sale") @db.Uuid
+  description String @db.VarChar(255)
+  quantity   Decimal @db.Decimal(15, 4)
+  unitPrice  Decimal @map("unit_price") @db.Decimal(15, 2)
+  sale       Sale    @relation(fields: [idSale], references: [idSale], onDelete: Restrict)
+
+  @@index([idSale])
+  @@map("sale_item")
+}
+
+model Purchase {
+  idPurchase String                 @id @default(dbgenerated("gen_random_uuid()")) @map("id_purchase") @db.Uuid
+  idSupplier String                 @map("id_supplier") @db.Uuid
+  date       DateTime               @db.Timestamp(6)
+  subtotal   Decimal                @db.Decimal(15, 2)
+  tax        Decimal                @db.Decimal(15, 2)
+  total      Decimal                @db.Decimal(15, 2)
+  status     BusinessDocumentStatus @default(DRAFT)
+  items      PurchaseItem[]
+
+  @@index([idSupplier])
+  @@index([date])
+  @@map("purchase")
+}
+
+model PurchaseItem {
+  idPurchaseItem String   @id @default(dbgenerated("gen_random_uuid()")) @map("id_purchase_item") @db.Uuid
+  idPurchase     String   @map("id_purchase") @db.Uuid
+  description    String   @db.VarChar(255)
+  quantity       Decimal  @db.Decimal(15, 4)
+  unitPrice      Decimal  @map("unit_price") @db.Decimal(15, 2)
+  purchase       Purchase @relation(fields: [idPurchase], references: [idPurchase], onDelete: Restrict)
+
+  @@index([idPurchase])
+  @@map("purchase_item")
+}
+
+model Expense {
+  idExpense   String                 @id @default(dbgenerated("gen_random_uuid()")) @map("id_expense") @db.Uuid
+  idParty     String?                @map("id_party") @db.Uuid
+  date        DateTime               @db.Timestamp(6)
+  description String                 @db.VarChar(500)
+  amount      Decimal                @db.Decimal(15, 2)
+  status      BusinessDocumentStatus @default(DRAFT)
+
+  @@index([idParty])
+  @@index([date])
+  @@map("expense")
+}
+
+model Loan {
+  idLoan       String        @id @default(dbgenerated("gen_random_uuid()")) @map("id_loan") @db.Uuid
+  idLender     String        @map("id_lender") @db.Uuid
+  principal    Decimal       @db.Decimal(15, 2)
+  interestRate Decimal       @map("interest_rate") @db.Decimal(8, 4)
+  startDate    DateTime      @map("start_date") @db.Date
+  maturityDate DateTime      @map("maturity_date") @db.Date
+  status       LoanStatus    @default(ACTIVE)
+  payments     LoanPayment[]
+
+  @@index([idLender])
+  @@map("loan")
+}
+
+model LoanPayment {
+  idLoanPayment  String   @id @default(dbgenerated("gen_random_uuid()")) @map("id_loan_payment") @db.Uuid
+  idLoan         String   @map("id_loan") @db.Uuid
+  date           DateTime @db.Timestamp(6)
+  amount         Decimal  @db.Decimal(15, 2)
+  principalAmount Decimal @map("principal_amount") @db.Decimal(15, 2)
+  interestAmount Decimal @map("interest_amount") @db.Decimal(15, 2)
+  loan           Loan     @relation(fields: [idLoan], references: [idLoan], onDelete: Restrict)
+
+  @@index([idLoan])
+  @@index([date])
+  @@map("loan_payment")
+}
+
+model CapitalContribution {
+  idContribution String   @id @default(dbgenerated("gen_random_uuid()")) @map("id_contribution") @db.Uuid
+  idOwner        String   @map("id_owner") @db.Uuid
+  date           DateTime @db.Timestamp(6)
+  amount         Decimal  @db.Decimal(15, 2)
+
+  @@index([idOwner])
+  @@index([date])
+  @@map("capital_contribution")
+}
+
+model OwnerWithdrawal {
+  idWithdrawal String   @id @default(dbgenerated("gen_random_uuid()")) @map("id_withdrawal") @db.Uuid
+  idOwner      String   @map("id_owner") @db.Uuid
+  date         DateTime @db.Timestamp(6)
+  amount       Decimal  @db.Decimal(15, 2)
+  reason       String?  @db.VarChar(500)
+
+  @@index([idOwner])
+  @@index([date])
+  @@map("owner_withdrawal")
+}
+
+model Refund {
+  idRefund String       @id @default(dbgenerated("gen_random_uuid()")) @map("id_refund") @db.Uuid
+  idSale   String       @map("id_sale") @db.Uuid
+  date     DateTime     @db.Timestamp(6)
+  amount   Decimal      @db.Decimal(15, 2)
+  reason   String       @db.VarChar(500)
+  status   RefundStatus @default(PENDING)
+  sale     Sale         @relation(fields: [idSale], references: [idSale], onDelete: Restrict)
+
+  @@index([idSale])
+  @@index([date])
+  @@map("refund")
 }
