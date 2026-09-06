@@ -92,6 +92,19 @@ export class PrismaAccountingRepository implements AccountingRepository {
     return toDomainTransaction(created);
   }
 
+  async listTransactions(): Promise<AccountingTransaction[]> {
+    const transactions = await this.prisma.transaction.findMany({
+      orderBy: {
+        date: "desc",
+      },
+      include: {
+        entries: true,
+      },
+    });
+
+    return transactions.map(toDomainTransaction);
+  }
+
   async findTransactionById(idTransaction: string): Promise<AccountingTransaction | null> {
     const transaction = await this.prisma.transaction.findUnique({
       where: {

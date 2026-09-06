@@ -16,6 +16,7 @@ export interface AccountingRepository {
   listAccounts(): Promise<Account[]>;
   findAccountsByIds(idAccounts: string[]): Promise<Account[]>;
   createTransaction(transaction: NewAccountingTransaction): Promise<AccountingTransaction>;
+  listTransactions(): Promise<AccountingTransaction[]>;
   findTransactionById(idTransaction: string): Promise<AccountingTransaction | null>;
   postTransaction(
     idTransaction: string,
