@@ -3,16 +3,24 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev:frontend": "next dev",
+    "dev:backend": "nest start --config nest-cli.json --watch",
     "build": "next build",
+    "build:backend": "nest build --config nest-cli.json && tsc-alias -p tsconfig.backend.json",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:validate": "prisma validate",
     "prisma:studio": "prisma studio",
     "start": "next start",
+    "start:backend": "node dist/backend/backend/main.js",
     "lint": "eslint"
   },
   "dependencies": {
+    "@nestjs/common": "^12.0.1",
+    "@nestjs/config": "^12.0.0",
+    "@nestjs/core": "^12.0.1",
+    "@nestjs/platform-express": "^12.0.1",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
     "@reduxjs/toolkit": "^2.12.0",
@@ -21,18 +29,26 @@
     "pg": "^8.23.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "react-redux": "^9.3.0"
+    "react-redux": "^9.3.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "zod": "^4.5.4"
   },
   "devDependencies": {
+    "@nestjs/cli": "^12.0.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "concurrently": "^10.0.5",
     "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
     "prisma": "^7.10.0",
     "tailwindcss": "^4",
+    "ts-node": "^10.9.2",
+    "tsc-alias": "^1.9.4",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "^5"
   }
 }

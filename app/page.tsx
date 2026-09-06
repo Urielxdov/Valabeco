@@ -37,36 +37,17 @@ import {
   type DraftEntry,
   type TransactionDraft,
 } from "@/src/features/accounting/store/transactionDraftSlice";
+import { accountingApi } from "@/src/shared/api/accounting-api";
 import { useAppDispatch, useAppSelector } from "@/src/store/hooks";
+import type {
+  Account,
+  AccountType,
+  Transaction,
+  TransactionEntry,
+  TransactionStatus,
+} from "@valabeco/contracts";
 
-type AccountType = "ASSET" | "LIABILITY" | "EQUITY" | "REVENUE" | "EXPENSE";
-type EntryType = "DEBIT" | "CREDIT";
-type TransactionStatus = "DRAFT" | "POSTED" | "VOIDED";
 type View = "summary" | "accounts" | "ledger" | "new-entry" | "entry-detail";
-
-type Account = {
-  idAccount: string;
-  name: string;
-  description: string | null;
-  type: AccountType;
-  balance: string;
-};
-
-type TransactionEntry = {
-  idTransactionEntry: string;
-  idTransaction: string;
-  idAccount: string;
-  amount: string;
-  type: EntryType;
-};
-
-type Transaction = {
-  idTransaction: string;
-  date: string;
-  description: string;
-  status: TransactionStatus;
-  entries: TransactionEntry[];
-};
 
 const accountTypeLabels: Record<AccountType, string> = {
   ASSET: "Activo",
@@ -154,17 +135,16 @@ export function AccountingApp({
 
     async function loadInitialAccounts() {
       try {
-        const response = await fetch("/api/accounts", {
+        const result = await accountingApi.listAccounts({
           cache: "no-store",
           signal: controller.signal,
         });
-        const payload = await response.json();
 
-        if (!response.ok) {
-          throw new Error(payload?.error?.message ?? "No se pudo cargar cuentas.");
+        if (!result.ok) {
+          throw new Error(result.error.message);
         }
 
-        const data: Account[] = payload.data ?? [];
+        const data = result.data;
         setAccounts(data);
         setSelectedAccountId((current) => current || data[0]?.idAccount || "");
       } catch (caught) {
@@ -190,17 +170,16 @@ export function AccountingApp({
 
     async function loadInitialTransactions() {
       try {
-        const response = await fetch("/api/transactions", {
+        const result = await accountingApi.listTransactions({
           cache: "no-store",
           signal: controller.signal,
         });
-        const payload = await response.json();
 
-        if (!response.ok) {
-          throw new Error(payload?.error?.message ?? "No se pudo cargar movimientos.");
+        if (!result.ok) {
+          throw new Error(result.error.message);
         }
 
-        const data: Transaction[] = payload.data ?? [];
+        const data = result.data;
         setTransactions(data);
 
         if (initialTransactionId) {
@@ -271,14 +250,13 @@ export function AccountingApp({
     setError(null);
 
     try {
-      const response = await fetch("/api/accounts", { cache: "no-store" });
-      const payload = await response.json();
+      const result = await accountingApi.listAccounts({ cache: "no-store" });
 
-      if (!response.ok) {
-        throw new Error(payload?.error?.message ?? "No se pudo cargar cuentas.");
+      if (!result.ok) {
+        throw new Error(result.error.message);
       }
 
-      setAccounts(payload.data ?? []);
+      setAccounts(result.data);
       setNotice("Informacion actualizada.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Error inesperado.");
@@ -293,23 +271,18 @@ export function AccountingApp({
     setError(null);
 
     try {
-      const response = await fetch("/api/accounts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: accountForm.name,
-          description: accountForm.description || null,
-          type: accountForm.type,
-        }),
+      const result = await accountingApi.createAccount({
+        name: accountForm.name,
+        description: accountForm.description || null,
+        type: accountForm.type,
       });
-      const payload = await response.json();
 
-      if (!response.ok) {
-        throw new Error(payload?.error?.message ?? "No se pudo crear la cuenta.");
+      if (!result.ok) {
+        throw new Error(result.error.message);
       }
 
-      setAccounts((current) => [...current, payload.data]);
-      setSelectedAccountId((current) => current || payload.data.idAccount);
+      setAccounts((current) => [...current, result.data]);
+      setSelectedAccountId((current) => current || result.data.idAccount);
       setAccountForm({ name: "", description: "", type: "ASSET" });
       setNotice("Cuenta creada correctamente.");
     } catch (caught) {
@@ -323,26 +296,21 @@ export function AccountingApp({
     setError(null);
 
     try {
-      const response = await fetch("/api/transactions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          description: transactionDraft.description,
-          date: transactionDraft.date,
-          entries: toTransactionEntryInput(transactionDraft),
-        }),
+      const result = await accountingApi.createTransaction({
+        description: transactionDraft.description,
+        date: transactionDraft.date,
+        entries: toTransactionEntryInput(transactionDraft),
       });
-      const payload = await response.json();
 
-      if (!response.ok) {
-        throw new Error(payload?.error?.message ?? "No se pudo crear el asiento.");
+      if (!result.ok) {
+        throw new Error(result.error.message);
       }
 
-      setTransactions((current) => [payload.data, ...current]);
-      setSelectedTransaction(payload.data);
+      setTransactions((current) => [result.data, ...current]);
+      setSelectedTransaction(result.data);
       dispatch(transactionDraftCleared());
       setView("entry-detail");
-      window.history.pushState(null, "", `/transactions/${payload.data.idTransaction}`);
+      window.history.pushState(null, "", `/transactions/${result.data.idTransaction}`);
       setNotice("Asiento creado como borrador.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Error inesperado.");
@@ -353,17 +321,16 @@ export function AccountingApp({
     setError(null);
 
     try {
-      const response = await fetch(`/api/transactions/${idTransaction}`, { cache: "no-store" });
-      const payload = await response.json();
+      const result = await accountingApi.getTransaction(idTransaction, { cache: "no-store" });
 
-      if (!response.ok) {
-        throw new Error(payload?.error?.message ?? "No se pudo consultar el asiento.");
+      if (!result.ok) {
+        throw new Error(result.error.message);
       }
 
-      setSelectedTransaction(payload.data);
+      setSelectedTransaction(result.data);
       setTransactions((current) =>
         current.map((transaction) =>
-          transaction.idTransaction === idTransaction ? payload.data : transaction,
+          transaction.idTransaction === idTransaction ? result.data : transaction,
         ),
       );
     } catch (caught) {
@@ -380,20 +347,19 @@ export function AccountingApp({
     setNotice(null);
 
     try {
-      const response = await fetch(
-        `/api/transactions/${selectedTransaction.idTransaction}/${action}`,
-        { method: "POST" },
-      );
-      const payload = await response.json();
+      const result =
+        action === "post"
+          ? await accountingApi.postTransaction(selectedTransaction.idTransaction)
+          : await accountingApi.voidTransaction(selectedTransaction.idTransaction);
 
-      if (!response.ok) {
-        throw new Error(payload?.error?.message ?? "No se pudo actualizar el asiento.");
+      if (!result.ok) {
+        throw new Error(result.error.message);
       }
 
-      setSelectedTransaction(payload.data);
+      setSelectedTransaction(result.data);
       setTransactions((current) =>
         current.map((transaction) =>
-          transaction.idTransaction === selectedTransaction.idTransaction ? payload.data : transaction,
+          transaction.idTransaction === selectedTransaction.idTransaction ? result.data : transaction,
         ),
       );
       await loadAccounts();
