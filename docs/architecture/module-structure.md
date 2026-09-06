@@ -3,6 +3,55 @@
 ## Estructura objetivo
 
 ```txt
+app/
+  (public)/
+  (workspace)/
+
+src/
+  features/
+  store/
+  shared/
+
+backend/
+  main.ts
+  src/
+    app.module.ts
+    shared/
+    modules/
+      <domain>/
+        domain/
+          entities/
+          value-objects/
+          events/
+          errors/
+          services/
+        application/
+          dto/
+          ports/
+          use-cases/
+        infrastructure/
+          composition.ts
+          prisma/
+          persistence/
+          external/
+        presentation/
+          http/
+        <domain>.module.ts
+        <resource>.controller.ts
+```
+
+Next.js queda como capa de interfaz y SSR puntual. Nest.js es dueno de los
+modulos de negocio, los casos de uso, repositorios y contratos HTTP del backend.
+
+La estructura actual mantiene `app/` en la raiz porque viene de
+`create-next-app`. El codigo de soporte del frontend vive en `src/features` y
+`src/store`; no debe importar `backend/src/modules`.
+
+## Estructura anterior
+
+Esta era la direccion original antes de separar Nest:
+
+```txt
 src/
   app/
     (public)/
@@ -39,11 +88,7 @@ src/
     config/
 ```
 
-El proyecto actual tiene `app/` en la raiz porque viene de `create-next-app`.
-Cuando empecemos a implementar dominios, la direccion recomendada es migrar a
-`src/app` y ajustar el alias `@/*` hacia `./src/*`. Si preferimos evitar ese
-movimiento inicial, podemos mantener `app/` en la raiz y usar imports como
-`@/src/modules/<domain>`.
+No se debe volver a este modelo para nuevos dominios.
 
 ## Capas por dominio
 
@@ -83,7 +128,7 @@ Implementa detalles externos:
 - lectura de variables de entorno.
 
 Regla: los archivos que toquen secretos, DB, SDKs privados o filesystem deben
-marcarse con `import 'server-only'`.
+vivir dentro de `backend/` y exponerse al frontend solo por HTTP.
 
 La base de datos principal sera PostgreSQL y el ORM sera Prisma. Los modelos
 Prisma representan persistencia, no el dominio; por eso deben mapearse hacia
@@ -97,34 +142,25 @@ palabras separadas por `_` y llaves primarias `id_{nombre_de_la_tabla}`.
 
 Adapta casos de uso al usuario o al contrato externo:
 
-- componentes UI especificos del dominio;
-- mappers de DTO a view model;
-- adaptadores para formularios;
-- Server Actions especificas del dominio, cuando convenga centralizarlas.
+- controladores HTTP;
+- parsers y validadores cercanos al request;
+- mappers de DTO a contratos de API;
+- filtros o adaptadores de error del modulo.
 
 Regla: los Client Components reciben DTOs seguros y minimos. No deben importar
-`infrastructure` ni codigo marcado como server-only.
+`backend/src/modules`, `infrastructure` ni Prisma.
 
 ## Entry points de Next.js
 
-`src/app` define rutas, layouts, `loading.tsx`, `error.tsx`, Server Actions
-cercanas a formularios y Route Handlers.
+`app/` define rutas, layouts, `loading.tsx`, `error.tsx` y componentes de pagina.
+No define Route Handlers de negocio bajo `app/api`.
 
 Ejemplo de una pagina:
 
 ```txt
-src/app/(workspace)/orders/page.tsx
-  -> importa un page component o mapper de modules/orders/presentation
-  -> obtiene datos desde composition/use cases de orders
-```
-
-Ejemplo de una API:
-
-```txt
-src/app/api/orders/route.ts
-  -> valida Request
-  -> llama a un caso de uso de orders
-  -> responde con DTO publico
+app/(workspace)/orders/page.tsx
+  -> importa componentes del frontend
+  -> consume el backend Nest por HTTP usando NEXT_PUBLIC_API_URL
 ```
 
 ## API publica de un dominio
@@ -132,12 +168,11 @@ src/app/api/orders/route.ts
 Cada dominio expone solo lo necesario desde su `index.ts`:
 
 ```txt
-src/modules/orders/index.ts
+backend/src/modules/orders/index.ts
 ```
 
 No importamos carpetas internas de otro dominio. Si un dominio necesita una
-capacidad de otro, depende de un puerto y la infraestructura/composicion conecta
-ambos lados.
+capacidad de otro, depende de un puerto y el modulo Nest conecta ambos lados.
 
 ## Nombres
 
@@ -147,12 +182,13 @@ ambos lados.
 - Adaptadores: tecnologia + rol + `adapter.ts`, por ejemplo
   `postgres-order-repository.adapter.ts`.
 - Mappers: origen + destino + `mapper.ts`.
-- Server Actions: funcion terminada en `Action`, por ejemplo
-  `createOrderAction`.
+- Controladores: recurso + `controller.ts`, por ejemplo
+  `orders.controller.ts`.
 
 ## Shared
 
-`src/shared` existe para capacidades realmente transversales:
+`backend/src/shared` y, si hace falta, `src/shared` existen para capacidades
+realmente transversales:
 
 - tipos base y errores comunes;
 - utilidades puras;

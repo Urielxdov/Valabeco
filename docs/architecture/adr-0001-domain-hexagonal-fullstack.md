@@ -10,10 +10,10 @@ Valabeco parte de una aplicacion Next.js 16 con App Router, React 19 y TypeScrip
 Queremos que el proyecto pueda crecer como producto fullstack sin mezclar reglas
 de negocio, UI, persistencia e integraciones externas en los mismos archivos.
 
-Next.js permite componer backend y frontend en el mismo deployable mediante Server
-Components, Server Actions y Route Handlers. Eso es util, pero tambien facilita
-que la logica de negocio termine acoplada a componentes, requests HTTP o clientes
-de base de datos. Para evitarlo, necesitamos limites claros desde el inicio.
+Next.js permite componer backend y frontend en el mismo deployable, pero en este
+proyecto decidimos que Next sea responsable del frontend y de SSR puntual. La
+capa de negocio y los endpoints HTTP viven en Nest.js para mantener una frontera
+clara y familiar para el equipo.
 
 Para persistencia, usaremos PostgreSQL como gestor de base de datos y Prisma como
 ORM/cliente de acceso a datos.
@@ -30,22 +30,23 @@ modulo.
 La unidad principal de organizacion sera el dominio de negocio:
 
 ```txt
-src/modules/<domain>/
+backend/src/modules/<domain>/
   domain/
   application/
   infrastructure/
   presentation/
+  <domain>.module.ts
+  <resource>.controller.ts
 ```
 
-La capa de entrega de Next.js quedara en `src/app` cuando migremos desde la
-plantilla actual. Mientras esa migracion no ocurra, el `app/` de la raiz cumple
-el mismo rol. Sus archivos deben ser adaptadores delgados, no contenedores de
-reglas de negocio.
+La capa de entrega de Next.js queda en `app/` y el estado/soporte del frontend en
+`src/`. Sus archivos deben consumir el backend por HTTP y no importar dominio,
+casos de uso, repositorios ni Prisma.
 
 ## Reglas de dependencia
 
 ```txt
-Next app / presentation
+Nest controller / presentation
         |
         v
 application ---> domain
@@ -65,10 +66,9 @@ infrastructure
 - PostgreSQL es el almacenamiento transaccional principal de la aplicacion.
 - Las tablas PostgreSQL usan `snake_case` en minusculas y sus llaves primarias
   usan `id_{nombre_de_la_tabla}`.
-- `presentation` transforma datos para UI/API y contiene componentes de dominio,
-  view models y adaptadores cercanos al usuario.
-- `src/app` llama a `presentation` o a factories de composicion, pero no contiene
-  decisiones de negocio.
+- `presentation` transforma datos para contratos HTTP y adaptadores cercanos al
+  usuario externo.
+- `app/` llama al backend Nest por HTTP, pero no contiene decisiones de negocio.
 
 ## Consecuencias
 
@@ -78,18 +78,16 @@ Beneficios:
 - Es mas facil cambiar persistencia, proveedor externo o forma de entrega.
 - La seguridad de datos queda centralizada en el lado servidor.
 - Los dominios pueden evolucionar con bajo acoplamiento.
+- La estructura del backend sigue convenciones conocidas de Nest.
 
 Costos:
 
 - Hay mas archivos que en una app CRUD rapida.
-- La composicion de dependencias debe ser explicita.
+- La composicion de dependencias debe declararse en los modulos Nest.
 - Necesitamos disciplina para no importar adaptadores desde dominio o aplicacion.
 
 ## No decisiones
 
 - No elegimos aun proveedor de autenticacion ni libreria de validacion.
-- No creamos un contenedor global de inyeccion de dependencias. Empezaremos con
-  factories simples por dominio y solo agregaremos un contenedor si el costo de
-  composicion lo justifica.
 - No separamos backend y frontend en repos o deployables distintos. La separacion
   inicial es logica, dentro del mismo proyecto.

@@ -2,12 +2,14 @@
 
 ## Lecturas para UI
 
-Preferimos Server Components para cargar datos del servidor.
+La UI consume el backend Nest por HTTP. Next puede usar Server Components para
+SSR puntual, pero no debe importar casos de uso, repositorios ni Prisma.
 
 ```txt
-page.tsx / Server Component
-  -> composition del dominio
-  -> caso de uso o query
+Next page/component
+  -> cliente HTTP del frontend
+  -> controlador Nest
+  -> caso de uso/query
   -> puerto
   -> adaptador de infraestructura con Prisma
   -> PostgreSQL
@@ -17,9 +19,9 @@ page.tsx / Server Component
 
 Reglas:
 
-- No hacer `fetch` desde un Server Component hacia un Route Handler interno.
-  Eso agrega un salto HTTP innecesario y puede fallar durante build cuando no
-  hay servidor escuchando.
+- No importar `backend/src/modules` desde `app/` ni desde `src/`.
+- Si una pagina necesita SSR, puede hacer `fetch` al backend Nest usando una URL
+  de servidor configurada, pero no debe saltarse la capa HTTP.
 - Si la vista necesita interactividad, pasar DTOs serializables a Client
   Components.
 - Iniciar lecturas independientes en paralelo cuando no dependan entre si.
@@ -27,12 +29,13 @@ Reglas:
 
 ## Mutaciones desde UI
 
-Las mutaciones iniciadas por formularios o eventos de usuario usan Server
-Actions.
+Las mutaciones iniciadas por formularios o eventos de usuario llaman al backend
+Nest por HTTP.
 
 ```txt
 form / Client Component
-  -> createThingAction
+  -> fetch(NEXT_PUBLIC_API_URL)
+  -> controlador Nest
   -> validar input
   -> autenticar y autorizar
   -> caso de uso
@@ -44,15 +47,15 @@ form / Client Component
 
 Reglas:
 
-- Toda Server Action debe tratarse como endpoint publico alcanzable por POST.
-- La autorizacion debe ocurrir dentro de la action o dentro del caso de uso/DAL,
-  no solo en la pagina que renderizo el formulario.
+- Toda ruta Nest debe tratarse como endpoint publico alcanzable por HTTP.
+- La autorizacion debe ocurrir dentro del controlador, guard o caso de uso, no
+  solo en la pagina que renderizo el formulario.
 - No devolver registros crudos de base de datos; devolver resultados minimos.
 - No ejecutar mutaciones durante el render de un Server Component.
 
 ## APIs HTTP y webhooks
 
-Usamos Route Handlers para:
+Usamos controladores Nest para:
 
 - APIs consumidas por clientes externos;
 - webhooks y callbacks de terceros;
@@ -61,12 +64,12 @@ Usamos Route Handlers para:
 - endpoints donde el contrato HTTP es parte del producto.
 
 ```txt
-route.ts
-  -> parsear Request una vez
+controller.ts
+  -> parsear body/params una vez
   -> validar content-type, tamano, params y body
   -> autenticar/autorizar o verificar firma
   -> caso de uso
-  -> mapear resultado a Response
+  -> mapear resultado a DTO/respuesta HTTP
 ```
 
 Reglas:
@@ -78,10 +81,10 @@ Reglas:
 
 ## Composicion de dependencias
 
-Cada dominio tendra una composicion server-only:
+Cada dominio declara su composicion en el modulo Nest:
 
 ```txt
-src/modules/<domain>/infrastructure/composition.ts
+backend/src/modules/<domain>/<domain>.module.ts
 ```
 
 Responsabilidades:
@@ -92,19 +95,23 @@ Responsabilidades:
 - construir o reutilizar el cliente Prisma;
 - mantener secretos fuera del cliente.
 
-Empezamos con factories explicitas:
+Los controladores reciben dependencias por constructor. Los providers se
+registran en el modulo:
 
 ```txt
-makeCreateOrderUseCase()
-makeListOrdersQuery()
+providers: [
+  OrderRepository,
+  CreateOrderUseCase,
+  ListOrdersQuery,
+]
 ```
 
-Si la composicion crece demasiado, evaluaremos un contenedor DI, pero no sera
-la primera opcion.
+Si un caso de uso depende de un puerto TypeScript, el modulo declara un provider
+con `useFactory` o un token explicito.
 
 ## Seguridad de datos
 
-- La capa de acceso a datos y adaptadores privados usan `import 'server-only'`.
+- La capa de acceso a datos y adaptadores privados viven dentro de `backend/`.
 - Solo `infrastructure` o `shared/config` leen `process.env`.
 - Solo `infrastructure` usa `PrismaClient` directamente.
 - Los DTOs hacia UI/API se disenan por caso de uso, no como espejo de tablas.
@@ -117,10 +124,10 @@ la primera opcion.
 ## Cache y revalidacion
 
 - Las lecturas se modelan como queries/casos de uso.
-- La decision de cache pertenece al adaptador de entrega o a funciones
-  server-only cercanas a la lectura, no al dominio.
-- Despues de una mutacion, la Server Action o Route Handler decide entre
-  `revalidatePath`, `revalidateTag`, `refresh` o `redirect`.
+- La decision de cache pertenece al frontend/SSR o al adaptador HTTP, no al
+  dominio.
+- Despues de una mutacion, la UI decide si refresca estado local, invalida cache
+  o navega.
 - Los casos de uso no importan `next/cache`.
 
 ## Testing esperado
