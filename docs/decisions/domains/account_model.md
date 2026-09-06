@@ -1,7 +1,7 @@
 # ADR-01: Dominio Contable Base (`account`, `transaction` y `transaction_entry`)
 
 ## Estado
-Planificación
+Realizada
 
 ## Fecha
 2026-09-04
@@ -13,7 +13,7 @@ El sistema requiere un modelo de dominio financiero sólido basado en la **conta
 ---
 
 ## Estructura Jerárquica del Dominio
-
+````
 Account
 ├── id_account
 ├── name
@@ -33,7 +33,7 @@ TransactionEntry
 ├── id_account
 ├── amount
 └── type
-
+````
 ---
 
 ## Modelado de Entidades

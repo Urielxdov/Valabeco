@@ -5,6 +5,13 @@ import type { TransactionDto } from "../dto/transaction.dto";
 import { toTransactionDto } from "../mappers/transaction.mapper";
 import type { AccountingRepository } from "../ports/accounting-repository.port";
 
+/**
+ * Valores de entrada para crear una nueva transacción contable.
+ * @property date Fecha de la transacción contable.
+ * @property description Descripción de la transacción contable.
+ * @property entries Entradas de la transacción contable.
+ * @property entries.idAccount Identificador de la cuenta contable asociada a la entrada de transacción.
+ */
 export type CreateTransactionInput = Readonly<{
   date?: Date;
   description: string;
@@ -15,6 +22,12 @@ export type CreateTransactionInput = Readonly<{
   }>;
 }>;
 
+
+/**
+ * Caso de uso para crear una nueva transacción contable.
+ * @param input Valores de entrada para crear una nueva transacción contable.
+ * @returns La transacción contable creada.
+ */
 export class CreateTransactionUseCase {
   constructor(private readonly repository: AccountingRepository) {}
 
