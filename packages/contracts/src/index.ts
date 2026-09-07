@@ -4,3 +4,4 @@ export * from "./api/response";
 export * from "./api/result";
 export * from "./accounting";
 export * from "./business-intelligence";
+export * from "./identity";

@@ -7,6 +7,7 @@ import {
 } from "@nestjs/common";
 import { AccountingApplicationError } from "../modules/accounting/application/errors";
 import { BusinessIntelligenceApplicationError } from "../modules/business-intelligence/application/errors";
+import { IdentityApplicationError } from "../modules/identity/application/errors";
 import { DomainError } from "./domain/errors";
 
 @Catch()
@@ -49,6 +50,14 @@ function mapError(error: unknown) {
     };
   }
 
+  if (error instanceof IdentityApplicationError) {
+    return {
+      code: error.code,
+      message: error.message,
+      status: getIdentityApplicationStatus(error.code),
+    };
+  }
+
   if (error instanceof DomainError) {
     return {
       code: error.name,
@@ -84,6 +93,18 @@ function getAccountingApplicationStatus(code: string): number {
   }
 
   if (code === "ACCOUNTING_CONFLICT") {
+    return HttpStatus.CONFLICT;
+  }
+
+  return HttpStatus.BAD_REQUEST;
+}
+
+function getIdentityApplicationStatus(code: string): number {
+  if (code === "IDENTITY_INVALID_CREDENTIALS") {
+    return HttpStatus.UNAUTHORIZED;
+  }
+
+  if (code === "IDENTITY_EMAIL_ALREADY_REGISTERED") {
     return HttpStatus.CONFLICT;
   }
 

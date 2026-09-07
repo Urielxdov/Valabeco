@@ -56,6 +56,16 @@ enum RefundStatus {
   @@map("refund_status")
 }
 
+model User {
+  idUser       String   @id @default(dbgenerated("gen_random_uuid()")) @map("id_user") @db.Uuid
+  email        String   @unique @db.VarChar(255)
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  name         String   @db.VarChar(255)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+
+  @@map("user")
+}
+
 model Account {
   idAccount   String             @id @default(dbgenerated("gen_random_uuid()")) @map("id_account") @db.Uuid
   name        String             @db.VarChar(255)

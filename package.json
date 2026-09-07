@@ -14,7 +14,8 @@
     "prisma:studio": "prisma studio",
     "start": "next start",
     "start:backend": "node dist/backend/backend/main.js",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:backend": "tsc -p tsconfig.backend.json && node --test \"dist/backend/backend/src/**/*.test.js\""
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",

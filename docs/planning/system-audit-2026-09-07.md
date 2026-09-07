@@ -2,7 +2,8 @@
 
 **Fecha:** 2026-09-07
 
-> **Actualización 2026-09-07:** los hallazgos #2 y #3 (uso de `Number` para dinero en BI y arquitectura no hexagonal de `business-intelligence`) fueron corregidos. Ver detalle al final del documento, sección "Remediación aplicada".
+> **Actualización 2026-09-07 (ronda 1):** los hallazgos #2 y #3 (uso de `Number` para dinero en BI y arquitectura no hexagonal de `business-intelligence`) fueron corregidos. Ver "Remediación aplicada".
+> **Actualización 2026-09-07 (ronda 2):** los hallazgos #1 (autenticación/autorización) y #4 (cero pruebas automatizadas) también fueron atendidos. Ver "Remediación aplicada — ronda 2" al final del documento.
 **Alcance:** backend (`backend/`), contratos compartidos (`packages/contracts/`), frontend (`app/`, `src/`), modelo de datos (`prisma/schema.prisma`) y documentos de arquitectura/decisiones (`docs/`).
 
 **Método:** lectura completa de los 34 archivos TypeScript del backend, los contratos compartidos, el cliente HTTP del frontend, el schema de Prisma y los ADRs/planning existentes. No se ejecutó la aplicación ni se corrió `npm audit`/escáneres automáticos; los hallazgos son de inspección estática.
@@ -179,20 +180,20 @@ Reglas de diseño alineadas con el resto del sistema:
 
 ## Lista de hallazgos priorizada (todas las dimensiones)
 
-| Prioridad | Hallazgo | Sección |
-|---|---|---|
-| 1 | Cero autenticación/autorización en toda la API | 2, #1 |
-| 2 | `business-intelligence` usa `Number` para dinero, violando ADR-02 (BI_model.md) | 3.2 |
-| 3 | `business-intelligence` no sigue arquitectura hexagonal y devuelve entidades Prisma crudas | 1.2 |
-| 4 | Cero pruebas automatizadas en todo el repo | 3.1 |
-| 5 | Sin rate limiting en endpoints sensibles | 2, #2 |
-| 6 | Sin protección de idempotencia en POSTs financieros | 2, #4 |
-| 7 | Lógica de conversión de dinero duplicada 4 veces | 3.2 |
-| 8 | Sin trazabilidad de "quién/cuándo" (audit trail) | 4 |
-| 9 | Sin paginación en listados | 3.4 |
-| 10 | ADRs vacíos (`adr-0004-sales-use-cases.md`, `customer_model.md`) | 1.3 |
-| 11 | Integridad referencial débil (`id_customer`/`id_supplier`/etc. sin FK) | 3.4 |
-| 12 | Sin headers de seguridad HTTP (`helmet`) | 2, #8 |
+| Prioridad | Hallazgo | Sección | Estado |
+|---|---|---|---|
+| 1 | Cero autenticación/autorización en toda la API | 2, #1 | ✅ Resuelto (ronda 2) |
+| 2 | `business-intelligence` usa `Number` para dinero, violando ADR-02 (BI_model.md) | 3.2 | ✅ Resuelto (ronda 1) |
+| 3 | `business-intelligence` no sigue arquitectura hexagonal y devuelve entidades Prisma crudas | 1.2 | ✅ Resuelto (ronda 1) |
+| 4 | Cero pruebas automatizadas en todo el repo | 3.1 | ✅ Resuelto (ronda 2) |
+| 5 | Sin rate limiting en endpoints sensibles | 2, #2 | Pendiente |
+| 6 | Sin protección de idempotencia en POSTs financieros | 2, #4 | Pendiente |
+| 7 | Lógica de conversión de dinero duplicada 4 veces | 3.2 | Parcial — resuelta en BI (ronda 1); queda en `contracts` y frontend |
+| 8 | Sin trazabilidad de "quién/cuándo" (audit trail) | 4 | Pendiente (propuesta de diseño ya documentada) |
+| 9 | Sin paginación en listados | 3.4 | Pendiente |
+| 10 | ADRs vacíos (`adr-0004-sales-use-cases.md`, `customer_model.md`) | 1.3 | Pendiente |
+| 11 | Integridad referencial débil (`id_customer`/`id_supplier`/etc. sin FK) | 3.4 | Pendiente |
+| 12 | Sin headers de seguridad HTTP (`helmet`) | 2, #8 | Pendiente |
 
 ---
 
@@ -225,8 +226,57 @@ Se resolvieron los hallazgos **#2** (uso de `Number` para dinero en BI, violando
 - `eslint backend`: sin errores ni advertencias.
 - Se regeneró el cliente Prisma (`prisma generate`) para que sus tipos coincidan con `schema.prisma`; antes de este refactor el propio `business-intelligence.service.ts` ya necesitaba un tipo `BusinessPrisma` hecho a mano para compensar un cliente desactualizado — ya no hace falta.
 
-### Lo que queda pendiente (no incluido en este cambio)
+### Lo que quedó pendiente tras esta ronda (resuelto en la ronda 2, ver abajo)
 
-- **Hallazgo #1 (autenticación/autorización):** sigue sin resolver. Ningún controlador nuevo tiene guards; es un cambio de arquitectura mayor que requiere decidir proveedor de auth primero.
-- **Hallazgo #4 (cero pruebas):** el módulo `business-intelligence` ahora tiene la misma forma "testeable" que `accounting` (funciones de dominio puras, casos de uso con puerto inyectado), pero no se agregaron pruebas — el diseño lo permite, no lo garantiza.
+- ~~Hallazgo #1 (autenticación/autorización)~~ — resuelto en la ronda 2.
+- ~~Hallazgo #4 (cero pruebas)~~ — resuelto en la ronda 2.
 - Las otras 2 duplicaciones de dinero fuera de BI (`packages/contracts/src/accounting/account.schema.ts` y `src/features/accounting/store/transactionDraftSlice.ts` en el frontend) no se tocaron; no eran parte de este pedido y no usan `Number` para sumas acumuladas de dinero, solo para validación estructural o totales de UI de un borrador aún no persistido.
+
+---
+
+## Remediación aplicada — ronda 2 (2026-09-07)
+
+Se resolvieron los hallazgos **#1** (cero autenticación/autorización) y **#4** (cero pruebas automatizadas).
+
+### Hallazgo #1 — Autenticación y autorización
+
+Se agregó un módulo `identity` con la misma estructura hexagonal que `accounting`/`business-intelligence`, y un guard global que ahora protege **toda** la API por defecto.
+
+- **`prisma/schema.prisma`**: nuevo modelo `User` (`id_user`, `email` único, `password_hash`, `name`, `created_at`), siguiendo el estándar de `database-modeling.md`.
+- **`backend/src/modules/identity/`**:
+  - `domain/user.ts`: entidad `User` + `createNewUser`/`restoreUser` (valida formato de email y nombre; nunca ve la contraseña en texto plano, solo recibe un `passwordHash` ya calculado).
+  - `application/`: puertos `UserRepository`, `PasswordHasher`, `TokenService`; casos de uso `RegisterUserUseCase` y `LoginUserUseCase`; DTOs/mappers que nunca exponen `passwordHash`.
+  - `infrastructure/crypto/scrypt-password-hasher.ts`: hashing de contraseñas con `scrypt` de `node:crypto` (salt aleatorio de 16 bytes, comparación con `timingSafeEqual`). **No se agregó `bcrypt` ni ninguna dependencia nueva** — este entorno no tiene acceso a `npm install` (sin conexión a `registry.npmjs.org`), así que se usó únicamente la librería estándar de Node.
+  - `infrastructure/crypto/hmac-token-service.ts`: token firmado con HMAC-SHA256 (`payload.firma`, base64url), con expiración (`AUTH_TOKEN_TTL_SECONDS`) y verificación de firma con `timingSafeEqual`. Por la misma razón (sin `npm install` disponible) no se usó `jsonwebtoken`/`@nestjs/jwt`; es funcionalmente equivalente a un JWT HS256 pero no intercambiable con librerías JWT estándar.
+  - `presentation/http/auth.guard.ts` + `public.decorator.ts`: guard `AuthGuard` registrado como `APP_GUARD` global (protege toda ruta Nest por defecto); `@Public()` exime únicamente `POST /auth/register` y `POST /auth/login`.
+  - `auth.controller.ts`: `POST /auth/register`, `POST /auth/login`.
+- **`packages/contracts/src/identity/`**: `UserSchema`, `RegisterRequestSchema`, `LoginRequestSchema`, `AuthResponseSchema`.
+- **`.env.example`**: nuevas variables `AUTH_TOKEN_SECRET` y `AUTH_TOKEN_TTL_SECONDS`.
+- **`domain-exception.filter.ts`**: mapea los nuevos errores de `identity` (`IDENTITY_INVALID_CREDENTIALS` → 401, `IDENTITY_EMAIL_ALREADY_REGISTERED` → 409).
+
+**Importante — acción manual pendiente antes de desplegar:**
+
+1. **Migración de base de datos:** este entorno no tiene una instancia de Postgres alcanzable (`localhost:5432` no responde), así que no fue posible correr `prisma migrate dev`. Además, `prisma/migrations/` ya no tenía ninguna migración previa para *ninguno* de los 15 modelos existentes (solo existía `migration_lock.toml`), por lo que no había una línea base sobre la cual generar el diff de forma segura. **Alguien con acceso a una base de datos de desarrollo debe correr `prisma migrate dev --name add_user`** para generar y aplicar la migración real de la tabla `user`. El cliente Prisma ya fue regenerado (`prisma generate`) para que el código compile contra el nuevo modelo.
+2. **`AUTH_TOKEN_SECRET`:** el valor en `.env.example` es un placeholder; cada entorno real necesita un secreto largo y aleatorio propio (por ejemplo `openssl rand -hex 32`).
+3. **Alcance de la autorización:** lo implementado es *autenticación* (¿quién eres?) para toda la API. No incluye *autorización* fina (roles/permisos por recurso, ej. "solo un admin puede anular transacciones") — eso queda como trabajo futuro sobre esta misma base (`request.userId` ya queda disponible en cada request autenticado para ese trabajo).
+
+### Hallazgo #4 — Pruebas automatizadas
+
+No había ningún framework de pruebas configurado (`package.json` no tenía `jest`/`vitest` ni script `test`) y este entorno tampoco tiene acceso a `npm install` para agregar uno. Se usó el test runner nativo de Node.js (`node:test` + `node:assert/strict`, ambos incluidos en Node ≥ 18, sin dependencias nuevas) compilando con el `tsc` que ya usa el proyecto.
+
+- **41 pruebas nuevas**, siguiendo exactamente la expectativa de `docs/architecture/runtime-flows.md` ("domain: unit tests rapidos, sin mocks de framework" / "application: unit tests con puertos fake/in-memory"):
+  - `backend/src/shared/domain/money.test.ts` — aritmética de `Money`, incluyendo los dos casos de redondeo de `multiplyByQuantity` (mitad hacia arriba y hacia abajo) que son el corazón de la corrección del hallazgo #2.
+  - `backend/src/modules/accounting/domain/transaction.test.ts` y `accounting-policy.test.ts` — invariante de partida doble, ciclo de vida `DRAFT/POSTED/VOIDED`, cálculo de deltas de saldo por tipo de cuenta.
+  - `backend/src/modules/accounting/application/use-cases/post-transaction.use-case.test.ts` — `PostTransactionUseCase` contra un `AccountingRepository` falso en memoria (sin Prisma, sin DB).
+  - `backend/src/modules/business-intelligence/domain/sale.test.ts` y `loan.test.ts` — invariantes de `BI_model.md` (`subtotal = Σ(quantity×unitPrice)`, `amount = principalAmount + interestAmount`).
+  - `backend/src/modules/business-intelligence/application/use-cases/create-sale.use-case.test.ts` — caso de uso contra un repositorio BI falso.
+  - `backend/src/modules/identity/domain/user.test.ts`, `application/use-cases/register-user.use-case.test.ts` (con `UserRepository`/`PasswordHasher`/`TokenService` falsos), `infrastructure/crypto/scrypt-password-hasher.test.ts` y `hmac-token-service.test.ts`.
+- **`package.json`**: nuevo script `"test:backend": "tsc -p tsconfig.backend.json && node --test \"dist/backend/backend/src/**/*.test.js\""`.
+- **Lo que queda fuera:** pruebas de `infrastructure/prisma/*` (integración contra una base real) y `e2e` de los controladores — `runtime-flows.md` las clasifica como una capa distinta ("infrastructure: integration tests contra servicios reales") que requiere una base de datos de prueba, no disponible en este entorno.
+
+### Verificación de esta ronda
+
+- `tsc -p tsconfig.backend.json --noEmit`: mismos 27 errores preexistentes (`Cannot find module '@nestjs/*'|'rxjs'`, paquetes no instalados en este entorno) — cero errores nuevos atribuibles a `identity` o a las pruebas.
+- `eslint backend`: 0 errores, 10 advertencias (parámetros no usados en los métodos de repositorios falsos que no aplican a una prueba puntual — patrón esperado al implementar una interfaz completa solo para una prueba).
+- `node --test "dist/backend/backend/src/**/*.test.js"`: **41/41 pruebas pasando**.
+- `prisma generate`: cliente regenerado correctamente contra el `schema.prisma` con el modelo `User` agregado.
