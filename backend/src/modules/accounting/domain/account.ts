@@ -1,6 +1,6 @@
+import { Money } from "../../../shared/domain/money";
 import type { AccountType, EntryType } from "./enums";
 import { InvalidAccountError } from "./errors";
-import { Money } from "./money";
 
 export type Account = Readonly<{
   idAccount: string;

@@ -2,12 +2,12 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 
 const globalForPrisma = globalThis as unknown as {
-  accountingPrisma?: PrismaClient;
+  sharedPrisma?: PrismaClient;
 };
 
 export function getPrisma(): PrismaClient {
-  if (globalForPrisma.accountingPrisma) {
-    return globalForPrisma.accountingPrisma;
+  if (globalForPrisma.sharedPrisma) {
+    return globalForPrisma.sharedPrisma;
   }
 
   const connectionString = process.env.DATABASE_URL;
@@ -20,7 +20,7 @@ export function getPrisma(): PrismaClient {
   const prisma = new PrismaClient({ adapter });
 
   if (process.env.NODE_ENV !== "production") {
-    globalForPrisma.accountingPrisma = prisma;
+    globalForPrisma.sharedPrisma = prisma;
   }
 
   return prisma;

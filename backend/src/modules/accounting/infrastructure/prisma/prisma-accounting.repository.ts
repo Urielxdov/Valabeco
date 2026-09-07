@@ -5,10 +5,10 @@ import type {
   TransactionEntry as PrismaTransactionEntry,
 } from "@prisma/client";
 
+import { Money } from "../../../../shared/domain/money";
 import type { Account, AccountBalanceDelta, NewAccount } from "../../domain/account";
 import { restoreAccount } from "../../domain/account";
 import type { AccountType, EntryType, TransactionStatus } from "../../domain/enums";
-import { Money } from "../../domain/money";
 import type {
   AccountingTransaction,
   NewAccountingTransaction,

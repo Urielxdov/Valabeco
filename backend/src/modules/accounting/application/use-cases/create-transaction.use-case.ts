@@ -1,5 +1,5 @@
+import { Money } from "../../../../shared/domain/money";
 import type { EntryType } from "../../domain/enums";
-import { Money } from "../../domain/money";
 import { createDraftTransaction } from "../../domain/transaction";
 import type { TransactionDto } from "../dto/transaction.dto";
 import { toTransactionDto } from "../mappers/transaction.mapper";

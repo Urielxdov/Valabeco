@@ -6,8 +6,8 @@ import {
   HttpStatus,
 } from "@nestjs/common";
 import { AccountingApplicationError } from "../modules/accounting/application/errors";
-import { AccountingDomainError } from "../modules/accounting/domain/errors";
-import { BusinessIntelligenceError } from "../modules/business-intelligence/application/errors";
+import { BusinessIntelligenceApplicationError } from "../modules/business-intelligence/application/errors";
+import { DomainError } from "./domain/errors";
 
 @Catch()
 export class DomainExceptionFilter implements ExceptionFilter {
@@ -41,19 +41,19 @@ function mapError(error: unknown) {
     };
   }
 
-  if (error instanceof AccountingDomainError) {
-    return {
-      code: error.name,
-      message: error.message,
-      status: HttpStatus.UNPROCESSABLE_ENTITY,
-    };
-  }
-
-  if (error instanceof BusinessIntelligenceError) {
+  if (error instanceof BusinessIntelligenceApplicationError) {
     return {
       code: error.code,
       message: error.message,
       status: HttpStatus.BAD_REQUEST,
+    };
+  }
+
+  if (error instanceof DomainError) {
+    return {
+      code: error.name,
+      message: error.message,
+      status: HttpStatus.UNPROCESSABLE_ENTITY,
     };
   }
 

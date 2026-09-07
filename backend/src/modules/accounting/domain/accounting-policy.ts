@@ -1,7 +1,7 @@
+import { Money } from "../../../shared/domain/money";
 import type { Account, AccountBalanceDelta } from "./account";
 import { getBalanceDelta } from "./account";
 import { InvalidTransactionError } from "./errors";
-import { Money } from "./money";
 import type { AccountingTransaction } from "./transaction";
 
 export function calculateBalanceDeltas(

@@ -7,7 +7,7 @@ import { ListAccountsUseCase } from "./application/use-cases/list-accounts.use-c
 import { ListTransactionsUseCase } from "./application/use-cases/list-transactions.use-case";
 import { PostTransactionUseCase } from "./application/use-cases/post-transaction.use-case";
 import { VoidTransactionUseCase } from "./application/use-cases/void-transaction.use-case";
-import { getPrisma } from "./infrastructure/prisma/prisma-client";
+import { getPrisma } from "../../shared/infrastructure/prisma-client";
 import { PrismaAccountingRepository } from "./infrastructure/prisma/prisma-accounting.repository";
 import { TransactionsController } from "./transactions.controller";
 

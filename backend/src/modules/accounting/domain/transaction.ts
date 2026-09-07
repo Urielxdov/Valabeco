@@ -1,6 +1,6 @@
+import { Money } from "../../../shared/domain/money";
 import type { EntryType, TransactionStatus } from "./enums";
 import { InvalidTransactionError } from "./errors";
-import { Money } from "./money";
 
 export type TransactionEntry = Readonly<{
   idTransactionEntry: string;

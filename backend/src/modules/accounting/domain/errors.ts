@@ -1,14 +1,9 @@
-export class AccountingDomainError extends Error {
+import { DomainError } from "../../../shared/domain/errors";
+
+export class AccountingDomainError extends DomainError {
   constructor(message: string) {
     super(message);
     this.name = "AccountingDomainError";
-  }
-}
-
-export class InvalidMoneyError extends AccountingDomainError {
-  constructor(message: string) {
-    super(message);
-    this.name = "InvalidMoneyError";
   }
 }
 
