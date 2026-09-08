@@ -1,7 +1,101 @@
 # ADR-02: Dominio de Inteligencia de Negocio Base 
 
 ## Estado
-Planificación
+Implementación parcial — revisado el 2026-09-08.
+
+El registro y la consulta de documentos de negocio están implementados. La
+integración automática con Contabilidad descrita en este ADR sigue pendiente.
+
+## Implementación actual
+
+El módulo [business-intelligence](../../../backend/src/modules/business-intelligence/)
+separa dominio, casos de uso, puertos, repositorio Prisma y controladores NestJS.
+Los [contratos compartidos](../../../packages/contracts/src/business-intelligence/)
+definen la validación HTTP con Zod. Las rutas requieren la autenticación global.
+
+| Método | Ruta | Operación |
+| :--- | :--- | :--- |
+| GET / POST | `/bi/sales` | Listar / crear ventas con partidas |
+| GET / POST | `/bi/purchases` | Listar / crear compras con partidas |
+| GET / POST | `/bi/expenses` | Listar / crear gastos |
+| GET / POST | `/bi/loans` | Listar préstamos con pagos / crear préstamo |
+| POST | `/bi/loan-payments` | Registrar pago de préstamo |
+| GET / POST | `/bi/capital-contributions` | Listar / crear aportaciones |
+| GET / POST | `/bi/owner-withdrawals` | Listar / crear retiros |
+| GET / POST | `/bi/refunds` | Listar / crear reembolsos |
+
+Los cuerpos HTTP usan nombres en camelCase, UUID y cadenas decimales para
+importes, cantidades y tasas. Por ejemplo, una venta recibe:
+
+```json
+{
+  "idCustomer": "11111111-1111-4111-8111-111111111111",
+  "tax": "16.00",
+  "items": [
+    { "description": "Servicio", "quantity": "1", "unitPrice": "100.00" }
+  ]
+}
+```
+
+El servidor calcula `subtotal = 100.00` y `total = 116.00`. `date` es opcional
+en las altas salvo las fechas de inicio y vencimiento del préstamo.
+
+### Reglas implementadas y persistencia
+
+- Ventas y compras requieren partidas, cantidades positivas, precios no negativos
+  e impuestos no negativos. El subtotal suma los importes de las partidas y el
+  total agrega el impuesto. `Money` guarda centavos como enteros seguros de
+  JavaScript y usa `bigint` para multiplicar cantidades y redondear cada producto
+  al centavo; la API transporta cadenas decimales.
+- Gastos, préstamos, pagos, aportaciones, retiros y reembolsos requieren importes
+  positivos. Los pagos validan `amount = principalAmount + interestAmount`.
+- El vencimiento del préstamo no puede ser anterior al inicio.
+- La migración [20260905221624_bi_model](../../../prisma/migrations/20260905221624_bi_model/migration.sql)
+  crea las tablas, enums, índices, claves foráneas internas y restricciones `CHECK`.
+  Los identificadores físicos son UUID; el dinero usa `DECIMAL(15,2)`, las
+  cantidades `DECIMAL(15,4)` y la tasa `DECIMAL(8,4)`.
+- Las FK internas unen partidas con documentos, pagos con préstamos y reembolsos
+  con ventas; usan `ON DELETE RESTRICT`. Las referencias a clientes, proveedores,
+  terceros, prestamistas y propietarios son UUID sin FK en el esquema actual.
+
+### Alcance de los estados
+
+Venta, compra y gasto comparten el enum físico `business_document_status`.
+Sus altas aceptan `DRAFT`, `CONFIRMED` o `CANCELLED`, con `DRAFT` por defecto.
+Préstamos y reembolsos aceptan sus estados declarados y usan `ACTIVE` y `PENDING`
+por defecto. No existen endpoints de transición, edición o eliminación.
+Registrar un documento como `CONFIRMED` no genera un asiento contable.
+
+### Pendientes para completar el ADR
+
+- Emitir y procesar eventos de negocio con políticas contables, vínculo entre
+  documento y asiento y protección contra contabilización duplicada.
+- Definir transiciones de confirmación, cancelación y ejecución; impedir saltos
+  arbitrarios de estado durante la creación.
+- Integrar los catálogos externos y sus claves foráneas.
+- Limitar reembolsos acumulados al importe elegible de la venta y validar su estado.
+- Controlar el principal pendiente, sobrepagos y estado del préstamo; calcular
+  intereses y actualizar `PAID` cuando corresponda.
+- Resolver una diferencia del contrato de pagos: HTTP exige ambos componentes
+  estrictamente positivos, mientras dominio y SQL permiten que uno sea cero.
+- Registrar actor y cambios de estas operaciones en la auditoría general.
+
+### Verificación y referencias
+
+Existen pruebas de ventas, préstamos, pagos y del caso de uso de creación de
+ventas. No equivalen a cobertura completa de todos los documentos ni de su
+integración contable. Se ejecutan con `npm run test:backend`.
+
+Para aplicar las migraciones del proyecto y generar el cliente:
+
+```sh
+npx prisma migrate deploy --config prisma7.config.ts
+npx prisma generate --config prisma7.config.ts
+```
+
+El estado de despliegue de cada base debe comprobarse por separado. El modelo
+conceptual siguiente conserva las relaciones y flujos objetivo; los pendientes
+anteriores indican qué partes todavía no están implementadas.
 
 ## Fecha 
 2026-09-05
@@ -84,14 +178,16 @@ owner_withdrawal
 ├── id_withdrawal
 ├── id_owner
 ├── date
-└── owner
+├── amount
+└── reason
 
 refund
 ├── id_refund
 ├── id_sale
 ├── date
 ├── amount
-└── reason
+├── reason
+└── status
 ````
 ---
 
@@ -129,16 +225,16 @@ enum sales_status {
 - `subtotal` debe corresponder a la suma de los importes de sus partidas
 - `total` debe corresponder a `subtotal + tax`
 - Una venta confirmada representa un hecho economico que puede generar un evento contable
-- La venta no crea directamente una `trasaction`; el dominio contable recibe el evento correspondiente
+- La venta no debe crear directamente una `transaction`; el dominio contable recibirá el evento correspondiente cuando se implemente la integración.
 
 ---
 ### 2. Entidad Detalle de venta (`sale_item`)
 Representa un bien o servicio individual incluido dentro de una venta
 | Campo | Tipo de Dato | Restriccion | Descripcion |
-| :--- | :--- | :--- | :--- | :--- |
+| :--- | :--- | :--- | :--- |
 | `id_sale_item` | UUID / BIGINT | PK | Identificador de la partida |
 | `id_sale` | UUID / BIGINT | FK, NOT NULL | Venta a la que pertenece la partida |
-| `descripction` | UUID / BIGINT | FK, NOT NULL | Venta a la que pertenece la partida |
+| `description` | VARCHAR(255) | NOT NULL | Descripción del bien o servicio vendido |
 | `quantity` | DECIMAL (15, 4) | CHECK(> 0) | Cantidad vendida |
 | `unit_price` | DECIMAL(15, 2) | CHECK(>=0) | Precio unitario de la partida |
 El importe de la partida se obtiene conceptualmente mediante: 
@@ -150,7 +246,7 @@ No es necesario almacenar un subtotal por partida si puede derivarse estos valor
 Representa la adquisición de bienes o servicios por parte de la empresa a un proveedor
 
 | Campo | Tipo de Dato | Restriccion | Descripcion |
-| :--- | :--- | :--- | :--- | :---|
+| :--- | :--- | :--- | :--- |
 | `id_purchase` | UUID / BIGINT | PK | Identificador unico de la compra |
 | `id_supplier` | UUID / BIGINT | FK, NOT NULL | Proveedor asociado a la compra |
 | `date` | TIMESTAMP | NOT NULL | Fecha y hora de la compra | 
@@ -162,8 +258,8 @@ Representa la adquisición de bienes o servicios por parte de la empresa a un pr
 #### Estado de Compra (`purchase_status`)
 ````
 
-enum purchase_satus {
-    DRAF = "DRAFT",
+enum purchase_status {
+    DRAFT = "DRAFT",
     CONFIRMED = "CONFIRMED",
     CANCELLED = "CANCELLED"
 }
@@ -171,6 +267,7 @@ enum purchase_satus {
 ````
 
 | Estado | Descripcion |
+| :--- | :--- |
 | `DRAFT` | Compra en preparacion |
 | `CONFIRMED` | Compra confirmada y valida |
 | `CANCELLED` | Compra cancelada conservando el historial |
@@ -185,7 +282,7 @@ Representa un bien o servicio individual adquirido dentro de una compra
 | `id_purchase` | UUID / BIGINT | FK, NOT NULL | Compra a la que pertenece la partida |
 | `description` | VARCHAR(255) | NOT NULL | Descripcion del bien o servicio adquirido |
 | `quantity` | DECIMAL(15, 4) | CHECK(> 0) | Cantidad adquirida |
-| `unit_price` | DECIMAL(15,2) | CHECK(=>0) | Precio unitario |
+| `unit_price` | DECIMAL(15,2) | CHECK(>=0) | Precio unitario |
 
 ---
 
@@ -328,12 +425,11 @@ enum RefundStatus {
 ````
 
 | Estado | Descripcion |
----
+| :--- | :--- |
 | `PENDING` | Reembolso solicitado pero todavia no ejecutado |
 | `COMPLETED` | Reembolso realizado |
 | `CANCELLED` | Solicitud de reembolso cancelada |
 
 ### Desiciones tomadas sobre ADR-01
 1. `balance`: conceptualmente no debera ser la fuente de verdad. Los `transaction_entry` son los que determinan el saldo; `balance` seria un valor materializado para rendimiento si posteriormente lo necesitamos
-2. Dinero: no usara `Number` de javascript **nunca**. En PostgreSQL usara NUMERIC/DECIMAL y en Prisma `Decimal`, o una representacion en unidades minimas si decisimos ese enfoque
-  
+2. Dinero: PostgreSQL utiliza NUMERIC/DECIMAL y Prisma utiliza `Decimal`. El dominio representa importes en centavos enteros seguros (`number`, validado con `Number.isSafeInteger`); la multiplicación por cantidades utiliza `bigint`. No se calculan saldos con importes fraccionarios en coma flotante.

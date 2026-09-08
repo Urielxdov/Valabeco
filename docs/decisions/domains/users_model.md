@@ -1,4 +1,4 @@
-# ADR03: Dominio de estructura organizacional
+# ADR04: Dominio de estructura organizacional
 
 ## Estado
 Realizado — 2026-09-08.
