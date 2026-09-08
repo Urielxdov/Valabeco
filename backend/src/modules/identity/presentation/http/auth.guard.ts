@@ -3,6 +3,7 @@ import { Reflector } from "@nestjs/core";
 
 import type { TokenService } from "../../application/ports/token-service.port";
 import { IS_PUBLIC_KEY } from "./public.decorator";
+import type { UserRepository } from "../../application/ports/user-repository.port";
 
 type AuthenticatedRequest = {
   headers: Record<string, string | string[] | undefined>;
@@ -19,9 +20,10 @@ export class AuthGuard implements CanActivate {
   constructor(
     private readonly tokenService: TokenService,
     private readonly reflector: Reflector,
+    private readonly users: UserRepository,
   ) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
@@ -42,6 +44,11 @@ export class AuthGuard implements CanActivate {
 
     if (!payload) {
       throw new UnauthorizedException("Invalid or expired token.");
+    }
+
+    const user = await this.users.findUserById(payload.idUser);
+    if (!user || user.status !== "ACTIVE") {
+      throw new UnauthorizedException("User is inactive or no longer exists.");
     }
 
     request.userId = payload.idUser;

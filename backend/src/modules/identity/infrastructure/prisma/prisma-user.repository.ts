@@ -39,5 +39,6 @@ function toDomainUser(user: PrismaUser): User {
     passwordHash: user.passwordHash,
     name: user.name,
     createdAt: user.createdAt,
+    status: user.status,
   });
 }

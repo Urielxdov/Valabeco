@@ -10,10 +10,16 @@ import { HmacTokenService } from "./infrastructure/crypto/hmac-token-service";
 import { ScryptPasswordHasher } from "./infrastructure/crypto/scrypt-password-hasher";
 import { PrismaUserRepository } from "./infrastructure/prisma/prisma-user.repository";
 import { AuthGuard } from "./presentation/http/auth.guard";
+import { UsersController } from "./users.controller";
+import { DeactivateUserUseCase } from "./application/use-cases/deactivate-user.use-case";
+import { PrismaUserLifecycle } from "./infrastructure/prisma/prisma-user-lifecycle";
 
 @Module({
-  controllers: [AuthController],
+  controllers: [AuthController, UsersController],
   providers: [
+    { provide: PrismaUserLifecycle, useFactory: () => new PrismaUserLifecycle(getPrisma()) },
+    { provide: DeactivateUserUseCase, inject: [PrismaUserLifecycle],
+      useFactory: (lifecycle: PrismaUserLifecycle) => new DeactivateUserUseCase(lifecycle) },
     {
       provide: PrismaUserRepository,
       useFactory: () => new PrismaUserRepository(getPrisma()),
@@ -49,9 +55,9 @@ import { AuthGuard } from "./presentation/http/auth.guard";
     },
     {
       provide: APP_GUARD,
-      inject: [HmacTokenService, Reflector],
-      useFactory: (tokenService: HmacTokenService, reflector: Reflector) =>
-        new AuthGuard(tokenService, reflector),
+      inject: [HmacTokenService, Reflector, PrismaUserRepository],
+      useFactory: (tokenService: HmacTokenService, reflector: Reflector, users: PrismaUserRepository) =>
+        new AuthGuard(tokenService, reflector, users),
     },
   ],
 })

@@ -62,8 +62,87 @@ model User {
   passwordHash String   @map("password_hash") @db.VarChar(255)
   name         String   @db.VarChar(255)
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  status       UserStatus @default(ACTIVE)
+  positionAssignments PositionAssignment[]
+  auditEvents AuditEvent[]
 
   @@map("user")
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  @@map("user_status")
+}
+
+enum OrganizationStatus {
+  ACTIVE
+  INACTIVE
+  @@map("organization_status")
+}
+
+enum PositionAssignmentStatus {
+  ACTIVE
+  ENDED
+  CANCELED
+  @@map("position_assignment_status")
+}
+
+model JobPosition {
+  idJobPosition String @id @default(dbgenerated("gen_random_uuid()")) @map("id_job_position") @db.Uuid
+  code String @unique @db.VarChar(50)
+  name String @db.VarChar(150)
+  description String? @db.VarChar(500)
+  maxPositions Int? @map("max_positions")
+  status OrganizationStatus @default(ACTIVE)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(6)
+  positions Position[]
+  @@map("job_position")
+}
+
+model Position {
+  idPosition String @id @default(dbgenerated("gen_random_uuid()")) @map("id_position") @db.Uuid
+  idJobPosition String @map("id_job_position") @db.Uuid
+  code String @unique @db.VarChar(50)
+  name String @db.VarChar(100)
+  status OrganizationStatus @default(ACTIVE)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(6)
+  jobPosition JobPosition @relation(fields: [idJobPosition], references: [idJobPosition], onDelete: Restrict)
+  assignments PositionAssignment[]
+  @@index([idJobPosition, status])
+  @@map("position")
+}
+
+model PositionAssignment {
+  idPositionAssignment String @id @default(dbgenerated("gen_random_uuid()")) @map("id_position_assignment") @db.Uuid
+  idPosition String @map("id_position") @db.Uuid
+  idUser String @map("id_user") @db.Uuid
+  startDate DateTime @map("start_date") @db.Timestamp(6)
+  endDate DateTime? @map("end_date") @db.Timestamp(6)
+  status PositionAssignmentStatus @default(ACTIVE)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(6)
+  position Position @relation(fields: [idPosition], references: [idPosition], onDelete: Restrict)
+  user User @relation(fields: [idUser], references: [idUser], onDelete: Restrict)
+  @@index([idPosition, startDate])
+  @@index([idUser, status])
+  @@map("position_assignment")
+}
+
+model AuditEvent {
+  idAuditEvent String @id @default(dbgenerated("gen_random_uuid()")) @map("id_audit_event") @db.Uuid
+  idActor String @map("id_actor") @db.Uuid
+  action String @db.VarChar(50)
+  entity String @db.VarChar(50)
+  idRecord String @map("id_record") @db.Uuid
+  before Json?
+  after Json
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  actor User @relation(fields: [idActor], references: [idUser], onDelete: Restrict)
+  @@index([entity, idRecord, createdAt])
+  @@map("audit_event")
 }
 
 model Account {

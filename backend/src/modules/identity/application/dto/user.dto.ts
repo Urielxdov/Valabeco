@@ -3,4 +3,5 @@ export type UserDto = Readonly<{
   email: string;
   name: string;
   createdAt: string;
+  status: "ACTIVE" | "INACTIVE";
 }>;

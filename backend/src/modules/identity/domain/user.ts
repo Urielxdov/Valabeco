@@ -8,6 +8,7 @@ export type User = Readonly<{
   passwordHash: string;
   name: string;
   createdAt: Date;
+  status: "ACTIVE" | "INACTIVE";
 }>;
 
 export type NewUser = Readonly<{
@@ -50,6 +51,7 @@ export function restoreUser(input: {
   passwordHash: string;
   name: string;
   createdAt: Date;
+  status?: "ACTIVE" | "INACTIVE";
 }): User {
   if (!input.idUser) {
     throw new InvalidUserError("User id is required.");
@@ -61,6 +63,7 @@ export function restoreUser(input: {
     passwordHash: input.passwordHash,
     name: input.name.trim(),
     createdAt: input.createdAt,
+    status: input.status ?? "ACTIVE",
   };
 }
 

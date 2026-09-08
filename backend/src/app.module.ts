@@ -3,8 +3,9 @@ import { ConfigModule } from "@nestjs/config";
 import { AccountingModule } from "./modules/accounting/accounting.module";
 import { BusinessIntelligenceModule } from "./modules/business-intelligence/business-intelligence.module";
 import { IdentityModule } from "./modules/identity/identity.module";
+import { OrganizationModule } from "./modules/organization";
 
 @Module({
-  imports: [ConfigModule.forRoot(), IdentityModule, AccountingModule, BusinessIntelligenceModule],
+  imports: [ConfigModule.forRoot(), IdentityModule, AccountingModule, BusinessIntelligenceModule, OrganizationModule],
 })
 export class AppModule {}

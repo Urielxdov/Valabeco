@@ -5,6 +5,7 @@ export const UserSchema = z.object({
   email: z.string().email(),
   name: z.string().min(1),
   createdAt: z.string().datetime(),
+  status: z.enum(["ACTIVE", "INACTIVE"]),
 });
 
 export type User = z.infer<typeof UserSchema>;

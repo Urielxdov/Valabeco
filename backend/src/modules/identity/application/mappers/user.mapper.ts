@@ -7,5 +7,6 @@ export function toUserDto(user: User): UserDto {
     email: user.email,
     name: user.name,
     createdAt: user.createdAt.toISOString(),
+    status: user.status,
   };
 }

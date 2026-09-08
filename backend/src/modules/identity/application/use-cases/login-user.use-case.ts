@@ -20,7 +20,7 @@ export class LoginUserUseCase {
   async execute(input: LoginUserInput): Promise<AuthDto> {
     const user = await this.repository.findUserByEmail(input.email.trim().toLowerCase());
 
-    if (!user) {
+    if (!user || user.status !== "ACTIVE") {
       throw new InvalidCredentialsError("Email or password is incorrect.");
     }
 
