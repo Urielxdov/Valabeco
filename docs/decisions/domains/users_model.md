@@ -1,7 +1,76 @@
 # ADR03: Dominio de estructura organizacional
 
 ## Estado
-Planificación
+Realizado — 2026-09-08.
+
+Implementado en el backend NestJS, los contratos compartidos y Prisma. La aplicación
+de las migraciones en la base configurada queda pendiente de que PostgreSQL esté
+disponible; se verificaron desde cero en una instancia temporal de PostgreSQL 17.
+
+## Implementación
+
+- Módulo `backend/src/modules/organization`: puestos, posiciones, asignación,
+  cierre, cancelación, traslado e historial por posición y usuario.
+- Tablas `job_position`, `position`, `position_assignment` y `audit_event`, con
+  claves foráneas restrictivas, índice único de ocupación activa y controles de
+  fechas, estados y límites positivos.
+- Transacciones serializables con reintentos y bloqueo del puesto al validar
+  capacidad. La auditoría se guarda en la misma transacción que cada cambio.
+- Baja lógica de usuarios desde Identidad: cierra todas sus asignaciones activas,
+  conserva las plazas y rechaza nuevos inicios de sesión y tokens previos.
+- Contratos HTTP con validación Zod; respuestas sin contraseñas ni hashes.
+- Pruebas de dominio, autenticación e integración con PostgreSQL, incluyendo
+  concurrencia y reversión de traslados fallidos.
+
+### Decisiones de la primera versión
+
+- Un usuario puede ocupar varias posiciones simultáneamente. Solo se impone
+  unicidad de asignación activa por posición.
+- Las asignaciones y cierres toman la hora del servidor; no se admiten fechas
+  programadas ni cambios retroactivos. Los traslados comparten el instante de
+  cierre e inicio y se ejecutan de forma atómica.
+- Una posición ocupada debe liberarse antes de inactivarse. Un puesto con
+  posiciones activas debe desactivarlas antes de quedar inactivo.
+- El puesto de una posición es inmutable para conservar su significado histórico.
+- La ocupación HTTP es `VACANT` u `OCCUPIED`; para posiciones inactivas es `null`.
+- Todas las rutas requieren la autenticación global existente. Los permisos
+  derivados del puesto siguen siendo una evolución futura.
+
+### API disponible
+
+| Método | Ruta | Operación |
+| :--- | :--- | :--- |
+| GET / POST | `/organization/job-positions` | Listar / crear puestos |
+| PATCH | `/organization/job-positions/:id` | Actualizar puesto, límite o estado |
+| GET / POST | `/organization/positions` | Listar / crear posiciones |
+| PATCH | `/organization/positions/:id` | Actualizar posición o estado |
+| GET | `/organization/positions/:id/assignments` | Historial de una posición |
+| GET | `/organization/users/:id/assignments` | Historial de un usuario |
+| POST | `/organization/positions/:id/assignments` | Asignar con `{ "idUser": "UUID" }` |
+| POST | `/organization/assignments/:id/end` | Finalizar asignación |
+| POST | `/organization/assignments/:id/cancel` | Cancelar asignación |
+| POST | `/organization/assignments/:id/transfer` | Trasladar con `{ "idPosition": "UUID" }` |
+| POST | `/users/:id/deactivate` | Dar de baja al usuario |
+
+### Migraciones y verificación
+
+`20260908110000_identity_user` completa la migración faltante de Identidad sin
+eliminar una tabla preexistente; `20260908120000_organization` agrega este dominio.
+
+```sh
+npx prisma migrate deploy --config prisma7.config.ts
+npx prisma generate --config prisma7.config.ts
+npm run test:backend
+```
+
+Para ejecutar también la prueba de integración, definir `TEST_DATABASE_URL` con
+una base PostgreSQL de pruebas. La prueba aplica todas las migraciones en un
+esquema aleatorio propio y lo elimina al terminar.
+
+Verificación realizada: 57 pruebas aprobadas con PostgreSQL, migraciones aplicadas
+desde cero, compilación del backend, TypeScript y ESLint. Flujo HTTP comprobado
+para autenticación, validación, alta de puestos y posiciones, asignación,
+ocupación derivada, baja de usuario y rechazo de sus tokens.
 
 ## Contexto
 El ERP requiere representar la estructura organizacional de la empresa y relacionarla con los usuarios que operan el sistema.
