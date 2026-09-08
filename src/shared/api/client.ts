@@ -47,6 +47,23 @@ export class ApiClient {
     });
   }
 
+  patch<TSchema extends z.ZodType>(
+    path: string,
+    dataSchema: TSchema,
+    body?: unknown,
+    init?: RequestInit,
+  ): Promise<Result<z.infer<TSchema>>> {
+    const headers = new Headers(init?.headers);
+    headers.set("Content-Type", "application/json");
+
+    return this.request(path, dataSchema, {
+      ...init,
+      method: "PATCH",
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  }
+
   private async request<TSchema extends z.ZodType>(
     path: string,
     dataSchema: TSchema,

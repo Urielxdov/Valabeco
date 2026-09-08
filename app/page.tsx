@@ -3,14 +3,11 @@
 import Link from "next/link";
 import {
   ArrowLeft,
-  BadgeCheck,
   Banknote,
-  BookOpen,
   Building2,
   CheckCircle2,
   FileText,
   Landmark,
-  LayoutDashboard,
   LineChart,
   LockKeyhole,
   Plus,
@@ -23,6 +20,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { AppSidebar } from "@/src/shared/components/app-sidebar";
+import { Alert, Info, Panel, ScreenTitle } from "@/src/shared/components/ui";
 import {
   selectIsTransactionDraftBalanced,
   selectTransactionDraft,
@@ -383,7 +382,7 @@ export function AccountingApp({
   return (
     <main className="min-h-screen bg-slate-100 text-slate-950">
       <div className="grid min-h-screen lg:grid-cols-[232px_1fr]">
-        <Sidebar view={view} />
+        <AppSidebar />
 
         <section className="min-w-0 px-4 py-6 sm:px-8 lg:px-10">
           <TopBar onRefresh={() => void loadAccounts()} />
@@ -468,54 +467,6 @@ export function AccountingApp({
         </section>
       </div>
     </main>
-  );
-}
-
-function Sidebar({ view }: { view: View }) {
-  const items = [
-    ["summary", "Resumen", "/", LayoutDashboard],
-    ["accounts", "Plan de cuentas", "/accounts", BookOpen],
-    ["new-entry", "Asientos", "/transactions/new", FileText],
-    ["ledger", "Libro mayor", "/ledger", Landmark],
-    ["entry-detail", "Detalle", "/transactions", BadgeCheck],
-  ] satisfies Array<[View, string, string, typeof LayoutDashboard]>;
-
-  const LogoIcon = LineChart;
-
-  return (
-    <aside className="bg-slate-950 px-5 py-6 text-white">
-      <div className="mb-10 flex items-center gap-3">
-        <div className="grid h-10 w-10 place-items-center rounded-md bg-teal-500">
-          <LogoIcon className="h-6 w-6" aria-hidden="true" />
-        </div>
-        <div>
-          <p className="text-lg font-semibold">Edeco</p>
-          <p className="text-xs text-slate-400">Libro mayor</p>
-        </div>
-      </div>
-
-      <nav className="space-y-2 text-sm">
-        {items.map(([itemView, label, href, Icon]) => (
-          <Link
-            className={`flex h-11 w-full items-center gap-3 rounded-md px-3 text-left ${
-              view === itemView
-                ? "bg-teal-600 text-white"
-                : "text-slate-300 hover:bg-slate-900 hover:text-white"
-            }`}
-            href={href}
-            key={itemView}
-          >
-            <Icon className="h-4 w-4" aria-hidden="true" />
-            {label}
-          </Link>
-        ))}
-      </nav>
-
-      <div className="mt-16 border-t border-slate-800 pt-5 text-xs text-slate-400">
-        <p className="font-semibold text-white">Maria Jimenez</p>
-        <p>Empresa Demo</p>
-      </div>
-    </aside>
   );
 }
 
@@ -1229,49 +1180,11 @@ function TransactionTable({
   );
 }
 
-function Panel({ children, title }: { children: React.ReactNode; title: string }) {
-  return (
-    <section className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
-      <h2 className="mb-4 text-lg font-bold">{title}</h2>
-      {children}
-    </section>
-  );
-}
-
-function ScreenTitle({
-  action,
-  subtitle,
-  title,
-}: {
-  action?: React.ReactNode;
-  subtitle: string;
-  title: string;
-}) {
-  return (
-    <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
-      <div>
-        <h2 className="text-2xl font-bold">{title}</h2>
-        <p className="text-sm text-slate-500">{subtitle}</p>
-      </div>
-      {action}
-    </div>
-  );
-}
-
 function Metric({ label, value }: { label: string; value: number }) {
   return (
     <div>
       <p className="text-sm font-semibold text-slate-600">{label}</p>
       <p className="mt-1 text-xl font-bold text-slate-950">{formatMoney(value)}</p>
-    </div>
-  );
-}
-
-function Info({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-md bg-slate-50 p-4">
-      <p className="text-xs font-semibold uppercase text-slate-500">{label}</p>
-      <p className="mt-1 font-semibold">{value}</p>
     </div>
   );
 }
@@ -1298,20 +1211,6 @@ function StatusBadge({ status }: { status: TransactionStatus }) {
       <Icon className="h-3.5 w-3.5" aria-hidden="true" />
       {statusLabels[status]}
     </span>
-  );
-}
-
-function Alert({ children, tone }: { children: React.ReactNode; tone: "error" | "success" }) {
-  return (
-    <div
-      className={`mb-5 rounded-md border px-4 py-3 text-sm ${
-        tone === "error"
-          ? "border-rose-200 bg-rose-50 text-rose-700"
-          : "border-emerald-200 bg-emerald-50 text-emerald-700"
-      }`}
-    >
-      {children}
-    </div>
   );
 }
 

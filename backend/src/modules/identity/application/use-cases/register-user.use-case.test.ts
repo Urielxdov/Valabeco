@@ -32,6 +32,11 @@ class FakeUserRepository implements UserRepository {
   async findUserById(idUser: string): Promise<User | null> {
     return Array.from(this.usersByEmail.values()).find((user) => user.idUser === idUser) ?? null;
   }
+
+  async listUsers(status?: "ACTIVE" | "INACTIVE"): Promise<User[]> {
+    const users = Array.from(this.usersByEmail.values());
+    return status ? users.filter((user) => user.status === status) : users;
+  }
 }
 
 class FakePasswordHasher implements PasswordHasher {

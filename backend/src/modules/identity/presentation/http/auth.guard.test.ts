@@ -15,6 +15,7 @@ test("a previously issued token stops working after user deactivation", async ()
   const user = restoreUser({ idUser: "user", email: "user@example.com", passwordHash: "hash", name: "User", createdAt: new Date(), status: "INACTIVE" });
   const guard = new AuthGuard({ issue: () => "valid-token", verify: () => ({ idUser: user.idUser }) }, new Reflector(), {
     createUser: async () => user, findUserByEmail: async () => user, findUserById: async () => user,
+    listUsers: async () => [user],
   });
   await assert.rejects(() => guard.canActivate(context), /inactive/);
 });

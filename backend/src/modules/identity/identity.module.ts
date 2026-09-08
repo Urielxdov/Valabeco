@@ -12,6 +12,7 @@ import { PrismaUserRepository } from "./infrastructure/prisma/prisma-user.reposi
 import { AuthGuard } from "./presentation/http/auth.guard";
 import { UsersController } from "./users.controller";
 import { DeactivateUserUseCase } from "./application/use-cases/deactivate-user.use-case";
+import { ListUsersUseCase } from "./application/use-cases/list-users.use-case";
 import { PrismaUserLifecycle } from "./infrastructure/prisma/prisma-user-lifecycle";
 
 @Module({
@@ -20,6 +21,8 @@ import { PrismaUserLifecycle } from "./infrastructure/prisma/prisma-user-lifecyc
     { provide: PrismaUserLifecycle, useFactory: () => new PrismaUserLifecycle(getPrisma()) },
     { provide: DeactivateUserUseCase, inject: [PrismaUserLifecycle],
       useFactory: (lifecycle: PrismaUserLifecycle) => new DeactivateUserUseCase(lifecycle) },
+    { provide: ListUsersUseCase, inject: [PrismaUserRepository],
+      useFactory: (repository: PrismaUserRepository) => new ListUsersUseCase(repository) },
     {
       provide: PrismaUserRepository,
       useFactory: () => new PrismaUserRepository(getPrisma()),

@@ -3,6 +3,7 @@ export * from "./api/meta";
 export * from "./api/response";
 export * from "./api/result";
 export * from "./accounting";
+export * from "./audit";
 export * from "./business-intelligence";
 export * from "./identity";
 export * from "./organization";

@@ -30,6 +30,15 @@ export class PrismaUserRepository implements UserRepository {
 
     return user ? toDomainUser(user) : null;
   }
+
+  async listUsers(status?: "ACTIVE" | "INACTIVE"): Promise<User[]> {
+    const users = await this.prisma.user.findMany({
+      where: status ? { status } : undefined,
+      orderBy: { name: "asc" },
+    });
+
+    return users.map(toDomainUser);
+  }
 }
 
 function toDomainUser(user: PrismaUser): User {
