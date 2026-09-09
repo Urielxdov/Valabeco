@@ -9,6 +9,7 @@ import { AccountingApplicationError } from "../modules/accounting/application/er
 import { BusinessIntelligenceApplicationError } from "../modules/business-intelligence/application/errors";
 import { IdentityApplicationError } from "../modules/identity/application/errors";
 import { DomainError } from "./domain/errors";
+import { CustomerApplicationError } from "../modules/customer/application/errors";
 
 @Catch()
 export class DomainExceptionFilter implements ExceptionFilter {
@@ -34,6 +35,10 @@ export class DomainExceptionFilter implements ExceptionFilter {
 }
 
 function mapError(error: unknown) {
+  if (error instanceof CustomerApplicationError) {
+    return { code: error.code, message: error.message,
+      status: error.code === "CUSTOMER_NOT_FOUND" ? HttpStatus.NOT_FOUND : HttpStatus.CONFLICT };
+  }
   if (error instanceof AccountingApplicationError) {
     return {
       code: error.code,

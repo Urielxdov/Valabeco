@@ -190,10 +190,98 @@ model Sale {
   status     BusinessDocumentStatus @default(DRAFT)
   items      SaleItem[]
   refunds    Refund[]
+  customer   Customer               @relation(fields: [idCustomer], references: [idCustomer], onDelete: Restrict)
 
   @@index([idCustomer])
   @@index([date])
   @@map("sale")
+}
+
+enum CustomerType {
+  PERSON
+  COMPANY
+  @@map("customer_type")
+}
+
+enum CustomerStatus {
+  ACTIVE
+  INACTIVE
+  @@map("customer_status")
+}
+
+enum CustomerAddressType {
+  FISCAL
+  BILLING
+  SHIPPING
+  OTHER
+  @@map("customer_address_type")
+}
+
+model Customer {
+  idCustomer   String @id @default(dbgenerated("gen_random_uuid()")) @map("id_customer") @db.Uuid
+  customerType CustomerType @map("customer_type")
+  displayName  String @map("display_name") @db.VarChar(255)
+  tradeName    String? @map("trade_name") @db.VarChar(255)
+  isGeneric    Boolean @default(false) @map("is_generic")
+  status       CustomerStatus @default(ACTIVE)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamp(6)
+  taxProfile   CustomerTaxProfile?
+  addresses    CustomerAddress[]
+  contacts     CustomerContact[]
+  sales        Sale[]
+  @@index([status, displayName])
+  @@map("customer")
+}
+
+model CustomerTaxProfile {
+  idCustomerTaxProfile String @id @default(dbgenerated("gen_random_uuid()")) @map("id_customer_tax_profile") @db.Uuid
+  idCustomer String @unique @map("id_customer") @db.Uuid
+  rfc String @unique @db.VarChar(13)
+  legalName String @map("legal_name") @db.VarChar(255)
+  taxRegime String @map("tax_regime") @db.VarChar(3)
+  taxZipCode String @map("tax_zip_code") @db.VarChar(5)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(6)
+  customer Customer @relation(fields: [idCustomer], references: [idCustomer], onDelete: Restrict)
+  @@map("customer_tax_profile")
+}
+
+model CustomerAddress {
+  idCustomerAddress String @id @default(dbgenerated("gen_random_uuid()")) @map("id_customer_address") @db.Uuid
+  idCustomer String @map("id_customer") @db.Uuid
+  addressType CustomerAddressType @map("address_type")
+  street String @db.VarChar(255)
+  externalNumber String? @map("external_number") @db.VarChar(50)
+  internalNumber String? @map("internal_number") @db.VarChar(50)
+  neighborhood String? @db.VarChar(150)
+  city String @db.VarChar(150)
+  municipality String? @db.VarChar(150)
+  state String @db.VarChar(150)
+  country String @db.VarChar(100)
+  postalCode String @map("postal_code") @db.VarChar(20)
+  status CustomerStatus @default(ACTIVE)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(6)
+  customer Customer @relation(fields: [idCustomer], references: [idCustomer], onDelete: Restrict)
+  @@index([idCustomer, status])
+  @@map("customer_address")
+}
+
+model CustomerContact {
+  idCustomerContact String @id @default(dbgenerated("gen_random_uuid()")) @map("id_customer_contact") @db.Uuid
+  idCustomer String @map("id_customer") @db.Uuid
+  name String @db.VarChar(150)
+  lastName String? @map("last_name") @db.VarChar(150)
+  email String? @db.VarChar(255)
+  phone String? @db.VarChar(50)
+  position String? @db.VarChar(150)
+  status CustomerStatus @default(ACTIVE)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(6)
+  customer Customer @relation(fields: [idCustomer], references: [idCustomer], onDelete: Restrict)
+  @@index([idCustomer, status])
+  @@map("customer_contact")
 }
 
 model SaleItem {

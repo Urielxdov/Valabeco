@@ -13,6 +13,7 @@ import type {
 } from "@prisma/client";
 
 import { Money } from "../../../../shared/domain/money";
+import { assertCustomerCanBuy } from "../../../customer";
 import type { BusinessIntelligenceRepository } from "../../application/ports/business-intelligence-repository.port";
 import type { CapitalContribution, NewCapitalContribution, NewOwnerWithdrawal, OwnerWithdrawal } from "../../domain/capital";
 import { restoreCapitalContribution, restoreOwnerWithdrawal } from "../../domain/capital";
@@ -36,26 +37,30 @@ export class PrismaBusinessIntelligenceRepository implements BusinessIntelligenc
   constructor(private readonly prisma: PrismaClient) {}
 
   async createSale(sale: NewSale): Promise<Sale> {
-    const created = await this.prisma.sale.create({
-      data: {
-        idCustomer: sale.idCustomer,
-        date: sale.date,
-        subtotal: sale.subtotal.toDecimalString(),
-        tax: sale.tax.toDecimalString(),
-        total: sale.total.toDecimalString(),
-        status: sale.status,
-        items: {
-          create: sale.items.map((item) => ({
-            description: item.description,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice.toDecimalString(),
-          })),
+    return this.prisma.$transaction(async tx => {
+      const customers = await tx.$queryRaw<Array<{ status: string }>>`SELECT status FROM customer WHERE id_customer = ${sale.idCustomer}::uuid FOR UPDATE`;
+      assertCustomerCanBuy(customers[0] ?? null);
+      const created = await tx.sale.create({
+        data: {
+          idCustomer: sale.idCustomer,
+          date: sale.date,
+          subtotal: sale.subtotal.toDecimalString(),
+          tax: sale.tax.toDecimalString(),
+          total: sale.total.toDecimalString(),
+          status: sale.status,
+          items: {
+            create: sale.items.map((item) => ({
+              description: item.description,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice.toDecimalString(),
+            })),
+          },
         },
-      },
-      include: { items: true },
-    });
+        include: { items: true },
+      });
 
-    return toDomainSale(created);
+      return toDomainSale(created);
+    }, { isolationLevel: "ReadCommitted" });
   }
 
   async listSales(): Promise<Sale[]> {

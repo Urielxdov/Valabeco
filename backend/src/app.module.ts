@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { CustomerModule } from "./modules/customer/customer.module";
 import { ConfigModule } from "@nestjs/config";
 import { AccountingModule } from "./modules/accounting/accounting.module";
 import { AuditModule } from "./modules/audit";
@@ -7,6 +8,6 @@ import { IdentityModule } from "./modules/identity/identity.module";
 import { OrganizationModule } from "./modules/organization";
 
 @Module({
-  imports: [ConfigModule.forRoot(), IdentityModule, AccountingModule, BusinessIntelligenceModule, OrganizationModule, AuditModule],
+  imports: [ConfigModule.forRoot(), IdentityModule, AccountingModule, BusinessIntelligenceModule, OrganizationModule, AuditModule, CustomerModule],
 })
 export class AppModule {}

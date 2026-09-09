@@ -7,3 +7,4 @@ export * from "./audit";
 export * from "./business-intelligence";
 export * from "./identity";
 export * from "./organization";
+export * from "./customer";
