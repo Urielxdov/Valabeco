@@ -1,3 +1,4 @@
+// Ejemplo comentado del dominio anterior; la implementación activa vive en backend/src/modules/accounting.
 import type { AccountType, EntryType } from "./enums";
 import { InvalidAccountError } from "./errors";
 import { Money } from "./money";
@@ -12,7 +13,7 @@ export type Account = Readonly<{
   name: string;
   description: string | null;
   type: AccountType; // Tipo de cuenta contable (activo, pasivo, ingreso, gasto, etc.)
-  balance: Money; 
+  balance: Money;
 }>;
 
 /**
@@ -36,8 +37,8 @@ export type AccountBalanceDelta = Readonly<{
 
 /**
  * Crea una nueva cuenta contable con los datos proporcionados.
- * @param input 
- * @returns 
+ * @param input
+ * @returns
  */
 export function createNewAccount(input: {
   name: string;
@@ -56,8 +57,8 @@ export function createNewAccount(input: {
 
 /**
  * Restaura una cuenta contable existente con los datos proporcionados.
- * @param input 
- * @returns 
+ * @param input
+ * @returns
  */
 export function restoreAccount(input: {
   idAccount: string;
@@ -83,16 +84,16 @@ export function restoreAccount(input: {
  * Calcula el cambio en el saldo de una cuenta contable basado en su tipo, el tipo de asiento y la cantidad.
  * Los activos y gastos aumentan con debitos y disminuyen con creditos
  * mientras que los pasivos e ingresos aumentan con creditos y disminuyen con debitos.
- * 
+ *
  * ¿Por que?
  * Porque los activos y gastos representan recursos que la empresa posee o consume
  * Activo: Cosas que la empresa posee y gastos: Cosas que la empresa consume para generar ingresos
  * Por otro lado, los pasivos e ingresos representan obligaciones y ganancias de la empresa
  * Pasivo: Cosas que la empresa debe a otros y Ingreso: Cosas que la empresa gana por sus operaciones
- * @param accountType 
- * @param entryType 
- * @param amount 
- * @returns 
+ * @param accountType
+ * @param entryType
+ * @param amount
+ * @returns
  */
 export function getBalanceDelta(
   accountType: AccountType,
@@ -110,8 +111,8 @@ export function getBalanceDelta(
 
 /**
  * Utileria para normalizar el nombre de una cuenta contable, asegurando que no esté vacío y que no exceda los 255 caracteres.
- * @param value 
- * @returns 
+ * @param value
+ * @returns
  */
 function normalizeAccountName(value: string): string {
   const name = value.trim();
@@ -129,8 +130,8 @@ function normalizeAccountName(value: string): string {
 
 /**
  * Utileria para normalizar un texto opcional, asegurando que no esté vacío.
- * @param value 
- * @returns 
+ * @param value
+ * @returns
  */
 function normalizeOptionalText(value?: string | null): string | null {
   const text = value?.trim() ?? "";

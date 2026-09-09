@@ -12,6 +12,7 @@ API HTTP y contiene la logica de negocio en dominios aislados.
 - [Estructura de modulos](./module-structure.md)
 - [Flujos de runtime](./runtime-flows.md)
 - [Modelado de base de datos](./database-modeling.md)
+- [Convenciones técnicas del proyecto](./technical-conventions.md)
 
 ## Principios
 
