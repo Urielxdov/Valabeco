@@ -29,6 +29,10 @@ type NavGroup = {
 
 const NAV_GROUPS: NavGroup[] = [
   {
+    title: "Gestión comercial",
+    items: [{ label: "Clientes", href: "/clientes", icon: Users }],
+  },
+  {
     title: "Contabilidad",
     items: [
       { label: "Resumen", href: "/", icon: LayoutDashboard, exact: true },

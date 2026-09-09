@@ -1,10 +1,12 @@
 import { configureStore } from "@reduxjs/toolkit";
 import { transactionDraftReducer } from "@/src/features/accounting/store/transactionDraftSlice";
+import { sessionReducer } from "@/src/features/identity/store/sessionSlice";
 
 export const makeStore = () =>
   configureStore({
     reducer: {
       transactionDraft: transactionDraftReducer,
+      session: sessionReducer,
     },
   });
 
